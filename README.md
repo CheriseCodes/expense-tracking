@@ -4,7 +4,7 @@ An application to track my expenses and budgets
 ## Plans
 - Python w/ Flask on the backend
 - React, Bootstrap, and a data visualization library (unknown)
-- PostgresSQL
+- PostgreSQL
 - Docker Compose
 - Terraform
 - Run locally or in the cloud
