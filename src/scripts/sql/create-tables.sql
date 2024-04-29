@@ -10,7 +10,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE categories (
-	category_id bitint DEFAULT nextval('integer_id_seq'),
+	category_id bigint DEFAULT nextval('integer_id_seq'),
 	category_name varchar NOT NULL,
 	PRIMARY KEY(category_id)
 );
