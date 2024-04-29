@@ -28,6 +28,7 @@ CREATE TABLE expenses (
 	CONSTRAINT fk_user
 		FOREIGN KEY(user_id)
 			REFERENCES users(user_id)
+				ON DELETE CASCADE
 );
 
 CREATE TABLE expense_categories (
@@ -37,9 +38,11 @@ CREATE TABLE expense_categories (
 	CONSTRAINT fk_expense
 		FOREIGN KEY(expense_id)
 			REFERENCES expenses(expense_id)
+				ON DELETE CASCADE,
         CONSTRAINT fk_category
                 FOREIGN KEY(category_id)
                         REFERENCES expenses(category_id) 	
+				ON DELETE CASCADE
 );
 
 CREATE TABLE wishlist (
@@ -57,6 +60,7 @@ CREATE TABLE wishlist (
         CONSTRAINT fk_user
                 FOREIGN KEY(user_id)
                         REFERENCES users(user_id)
+				ON DELETE CASCADE
 );
 
 CREATE TABLE budgets (
@@ -71,7 +75,9 @@ CREATE TABLE budgets (
 	CONSTRAINT fk_user
                 FOREIGN KEY(user_id)
                         REFERENCES users(user_id)
+				ON DELETE CASCADE,
         CONSTRAINT fk_category
                 FOREIGN KEY(category_id)
                         REFERENCES expenses(category_id)
+				ON DELETE CASCADE
 );
