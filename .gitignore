@@ -1,3 +1,11 @@
+# Mac
+.DS_Store
+
+# Application
+real_data/
+my_notes.txt
+notes.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
