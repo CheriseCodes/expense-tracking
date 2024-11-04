@@ -52,4 +52,4 @@ purchases = pd.DataFrame({'Item': fake_items, 'Vendor': fake_vendors,
 print(f"Final result...")
 print(purchases)
 purchases.to_csv(
-    f"sample_data/{num_of_purchases}-purchases.csv", sep="\t")
+    f"sample_data/{num_of_purchases}-purchases.csv", sep="\t", index=False)
