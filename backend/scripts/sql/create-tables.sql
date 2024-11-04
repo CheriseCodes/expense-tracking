@@ -6,6 +6,7 @@ CREATE TABLE users (
 	role char(30) NOT NULL, # regular user, admin or something else
 	created_at timestamp NOT NULL,
 	last_login timestamp NOT NULL,
+        categories bigint[], # array of category ids
 	PRIMARY KEY(user_id)
 );
 
@@ -22,6 +23,7 @@ CREATE TABLE expenses (
 	vendor varchar NOT NULL,
 	price decimal(12,2) NOT NULL,
 	date_purchased date NOT NULL,
+	payment_method varchar,
 	notes varchar,
 	created_at timestamp NOT NULL,
 	PRIMARY KEY (expense_id, user_id),
@@ -71,6 +73,8 @@ CREATE TABLE budgets (
 	future_spend decimal(12, 2) NOT NULL,
 	max_spend decimal(12, 2) NOT NULL,
 	is_over_max boolean NOT NULL,
+        start_date date NOT NULL,
+        end_date date NOT NULL,
 	PRIMARY KEY(budget_id, user_id)
 	CONSTRAINT fk_user
                 FOREIGN KEY(user_id)
