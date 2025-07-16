@@ -71,8 +71,8 @@ export default function Categories() {
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
     setFormData({
-      name: category.name,
-      description: category.description,
+      name: category.category_name,
+      description: category.category_description,
       color: category.color,
     });
     setShowModal(true);
@@ -98,9 +98,9 @@ export default function Categories() {
     });
   };
 
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCategories = categories.filter(category => 
+    category.category_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.category_description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -152,7 +152,7 @@ export default function Categories() {
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCategories.map((category) => (
-          <div key={category.id} className="card hover:shadow-lg transition-shadow">
+          <div key={category.category_id} className="card hover:shadow-lg transition-shadow">
             <div className="flex items-start justify-between">
               <div className="flex items-center">
                 <div 
@@ -161,10 +161,10 @@ export default function Categories() {
                 ></div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {category.name}
+                    {category.category_name}
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {category.description}
+                    {category.category_description}
                   </p>
                 </div>
               </div>

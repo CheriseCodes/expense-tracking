@@ -22,9 +22,9 @@ export interface UserUpdate {
 }
 
 export interface Category {
-  id: string;
-  name: string;
-  description: string;
+  category_id: string;
+  category_name: string;
+  category_description: string;
   color: string;
   created_at: string;
   updated_at: string;
