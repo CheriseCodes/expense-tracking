@@ -6,6 +6,9 @@ real_data/
 my_notes.txt
 notes.txt
 
+# Cursor
+.cursor/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
