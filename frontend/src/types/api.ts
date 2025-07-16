@@ -1,0 +1,141 @@
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserCreate {
+  username: string;
+  email: string;
+  full_name: string;
+  password: string;
+}
+
+export interface UserUpdate {
+  username?: string;
+  email?: string;
+  full_name?: string;
+  password?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryCreate {
+  name: string;
+  description: string;
+  color: string;
+}
+
+export interface CategoryUpdate {
+  name?: string;
+  description?: string;
+  color?: string;
+}
+
+export interface Expense {
+  id: string;
+  user_id: string;
+  category_id: string;
+  amount: number;
+  description: string;
+  date: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  category?: Category;
+}
+
+export interface ExpenseCreate {
+  user_id: string;
+  category_id: string;
+  amount: number;
+  description: string;
+  date: string;
+}
+
+export interface ExpenseUpdate {
+  user_id?: string;
+  category_id?: string;
+  amount?: number;
+  description?: string;
+  date?: string;
+}
+
+export interface WishlistItem {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  estimated_cost: number;
+  priority: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+}
+
+export interface WishlistItemCreate {
+  user_id: string;
+  name: string;
+  description: string;
+  estimated_cost: number;
+  priority: string;
+}
+
+export interface WishlistItemUpdate {
+  user_id?: string;
+  name?: string;
+  description?: string;
+  estimated_cost?: number;
+  priority?: string;
+}
+
+export interface Budget {
+  id: string;
+  user_id: string;
+  category_id: string;
+  amount: number;
+  period: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  category?: Category;
+}
+
+export interface BudgetCreate {
+  user_id: string;
+  category_id: string;
+  amount: number;
+  period: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface BudgetUpdate {
+  user_id?: string;
+  category_id?: string;
+  amount?: number;
+  period?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+}
+
+export interface ApiError {
+  detail: string;
+} 
