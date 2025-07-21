@@ -3,7 +3,7 @@ CREATE TABLE users (
 	username varchar NOT NULL,
 	email varchar NOT NULL,
 	password_hash char(73) NOT NULL, -- max length using bcrypt is 72
-	role char(30) NOT NULL, -- regular user, admin or something else
+	role varchar(30) NOT NULL, -- regular user, admin or something else
 	created_at timestamp NOT NULL,
 	last_login timestamp NOT NULL,
         categories bigint[], -- array of category ids
@@ -54,7 +54,7 @@ CREATE TABLE wishlist (
 	vendor varchar,
 	price decimal(12,2) NOT NULL,
 	priority int NOT NULL,
-	status char(20) NOT NULL, -- wished, scheduled, bought
+	status varchar(20) NOT NULL, -- wished, scheduled, bought
 	notes varchar,
 	planned_date date,
 	created_at timestamp,

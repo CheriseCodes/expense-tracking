@@ -14,14 +14,23 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - expenses-db-postgres-volume:/var/lib/postgresql/data 
-      - ./scripts/sql/:/docker-entrypoint-initdb.d/
+      - expenses-db-postgres-volume:/var/lib/postgresql/data
   adminer:
     image: adminer
     restart: always
     ports:
       - "8000:8080"
-
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend/src:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/expenses_db
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
 volumes:
   expenses-db-postgres-volume:
     driver: local
