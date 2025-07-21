@@ -54,7 +54,7 @@ export default function Users() {
       if (editingUser) {
         const updateData: UserUpdate = { ...formData };
         if (!updateData.password) delete updateData.password;
-        await userApi.update(editingUser.id, updateData);
+        await userApi.update(editingUser.user_id, updateData);
       } else {
         await userApi.create(formData as UserCreate);
       }
@@ -207,7 +207,7 @@ export default function Users() {
                         <PencilIcon className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => handleDelete(user.user_id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         <TrashIcon className="h-4 w-4" />

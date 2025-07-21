@@ -290,7 +290,7 @@ export default function Wishlist() {
                   >
                     <option value="">Select a user</option>
                     {users.map((user) => (
-                      <option key={user.id} value={user.id}>
+                      <option key={user.user_id} value={user.user_id}>
                         {user.full_name} (@{user.username})
                       </option>
                     ))}
