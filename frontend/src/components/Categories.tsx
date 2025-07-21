@@ -54,7 +54,7 @@ export default function Categories() {
     e.preventDefault();
     try {
       if (editingCategory) {
-        await categoryApi.update(editingCategory.id, formData);
+        await categoryApi.update(editingCategory.category_id, formData);
       } else {
         await categoryApi.create(formData);
       }
@@ -176,7 +176,7 @@ export default function Categories() {
                   <PencilIcon className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(category.id)}
+                  onClick={() => handleDelete(category.category_id)}
                   className="text-red-600 hover:text-red-900 p-1"
                 >
                   <TrashIcon className="h-4 w-4" />
