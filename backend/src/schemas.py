@@ -8,7 +8,7 @@ import re
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
     email: EmailStr
-    role: str = Field(..., pattern=r'^(regular|admin)$')
+    role: str = Field(..., pattern=r'^(regular|admin)$', strip_whitespace=True)
 
 class UserCreate(UserBase):
     password_hash: str = Field(..., min_length=60, max_length=73)  # bcrypt hash length
@@ -16,7 +16,7 @@ class UserCreate(UserBase):
 class UserUpdate(UserBase):
     username: Optional[str] = Field(None, min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
     email: Optional[EmailStr] = None
-    role: Optional[str] = Field(None, pattern=r'^(regular|admin)$')
+    role: Optional[str] = Field(None, pattern=r'^(regular|admin)$', strip_whitespace=True)
     password_hash: Optional[str] = Field(None, min_length=60, max_length=73)
 
 class User(UserBase):
