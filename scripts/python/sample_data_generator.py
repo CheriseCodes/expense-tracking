@@ -3,6 +3,8 @@ import random
 import pandas as pd
 import numpy as np
 from faker import Faker
+import os
+from pathlib import Path
 
 num_of_purchases = np.random.randint(20, 60)
 
@@ -51,5 +53,17 @@ purchases = pd.DataFrame({'Item': fake_items, 'Vendor': fake_vendors,
                          'Price': fake_prices, 'Date': fake_dates, 'Notes': fake_notes})
 print(f"Final result...")
 print(purchases)
-purchases.to_csv(
-    f"sample_data/{num_of_purchases}-purchases.csv", sep="\t", index=False)
+
+# Dynamically find the sample_data directory relative to this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sample_data_dir = os.path.join(script_dir, "..", "..", "sample_data")
+
+# Ensure the sample_data directory exists
+os.makedirs(sample_data_dir, exist_ok=True)
+
+# Generate the output file path
+output_file = os.path.join(sample_data_dir, f"{num_of_purchases}-purchases.csv")
+print(f"Writing to: {output_file}")
+
+purchases.to_csv(output_file, sep="\t", index=False)
+print(f"Successfully created: {output_file}")
