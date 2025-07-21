@@ -2,13 +2,17 @@
 An application to track my expenses and budgets
 
 ## Plans
-- Python w/ Flask on the backend
-- React, Bootstrap, and a data visualization library (unknown)
-- PostgreSQL
-- Docker Compose
-- Terraform
-- Run locally or in the cloud
-- I want to..
-  - Upload data from Apple Numbers to the app and have it automatically visualized
-  - Make notes on each data point
-  - Plan future expenses
+[x] Python w/ FastAPI on the backend
+[x] React, Tailwind
+[] Data visualization library (unknown)
+[x] PostgreSQL
+[x] Docker Compose
+[] Terraform
+[x] Run locally
+[] Run in the cloud
+
+I want to..
+[x] Upload data from Apple Numbers to the app
+[] Visualize the data
+[] Make notes on each data point
+[] Plan future expenses
