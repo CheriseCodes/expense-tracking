@@ -11,10 +11,12 @@ import type { Expense, ExpenseCreate, ExpenseUpdate, User, Category } from '../t
 
 interface ExpenseFormData {
   user_id: string;
-  category_id: string;
-  amount: number;
-  description: string;
-  date: string;
+  item: string;
+  vendor: string;
+  price: number;
+  date_purchased: string;
+  payment_method?: string;
+  notes?: string;
 }
 
 export default function Expenses() {
@@ -28,10 +30,12 @@ export default function Expenses() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [formData, setFormData] = useState<ExpenseFormData>({
     user_id: '',
-    category_id: '',
-    amount: 0,
-    description: '',
-    date: new Date().toISOString().split('T')[0],
+    item: '',
+    vendor: '',
+    price: 0,
+    date_purchased: new Date().toISOString().split('T')[0],
+    payment_method: '',
+    notes: ''
   });
 
   useEffect(() => {
@@ -62,7 +66,7 @@ export default function Expenses() {
     e.preventDefault();
     try {
       if (editingExpense) {
-        await expenseApi.update(editingExpense.id, formData);
+        await expenseApi.update(editingExpense.expense_id, formData);
       } else {
         await expenseApi.create(formData);
       }
@@ -80,10 +84,12 @@ export default function Expenses() {
     setEditingExpense(expense);
     setFormData({
       user_id: expense.user_id,
-      category_id: expense.category_id,
-      amount: expense.amount,
-      description: expense.description,
-      date: expense.date.split('T')[0],
+      item: expense.item,
+      vendor: expense.vendor,
+      price: expense.price,
+      date_purchased: expense.date_purchased.split('T')[0],
+      payment_method: expense.payment_method || '',
+      notes: expense.notes || ''
     });
     setShowModal(true);
   };
@@ -103,20 +109,22 @@ export default function Expenses() {
   const resetForm = () => {
     setFormData({
       user_id: '',
-      category_id: '',
-      amount: 0,
-      description: '',
-      date: new Date().toISOString().split('T')[0],
+      item: '',
+      vendor: '',
+      price: 0,
+      date_purchased: new Date().toISOString().split('T')[0],
+      payment_method: '',
+      notes: ''
     });
   };
 
   const filteredExpenses = expenses.filter(expense =>
-    expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.user?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    expense.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    expense.user?.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.price, 0);
 
   if (loading) {
     return (
@@ -181,16 +189,16 @@ export default function Expenses() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
+                  Item/Vendor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
+                  Payment Method
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
+                  Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
@@ -202,38 +210,32 @@ export default function Expenses() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredExpenses.map((expense) => (
-                <tr key={expense.id} className="hover:bg-gray-50">
+                <tr key={expense.expense_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {expense.description}
+                      {expense.item}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {expense.vendor}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {expense.user?.full_name || 'Unknown'}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      @{expense.user?.username || 'unknown'}
+                      {expense.user?.username || 'Unknown'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: expense.category?.color || '#6B7280' }}
-                      ></div>
-                      <span className="text-sm text-gray-900">
-                        {expense.category?.name || 'Uncategorized'}
-                      </span>
+                    <div className="text-sm text-gray-900">
+                      {expense.payment_method || 'Not specified'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-semibold text-gray-900">
-                      ${expense.amount.toFixed(2)}
+                      ${expense.price.toFixed(2)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(expense.date).toLocaleDateString()}
+                    {new Date(expense.date_purchased).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -244,7 +246,7 @@ export default function Expenses() {
                         <PencilIcon className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(expense.id)}
+                        onClick={() => handleDelete(expense.expense_id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         <TrashIcon className="h-4 w-4" />
@@ -269,13 +271,25 @@ export default function Expenses() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
+                    Item
                   </label>
                   <input
                     type="text"
                     required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    value={formData.item}
+                    onChange={(e) => setFormData({ ...formData, item: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vendor
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.vendor}
+                    onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                     className="input-field"
                   />
                 </div>
@@ -292,42 +306,41 @@ export default function Expenses() {
                     <option value="">Select a user</option>
                     {users.map((user) => (
                       <option key={user.id} value={user.id}>
-                        {user.full_name} (@{user.username})
+                        {user.username}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <select
-                    required
-                    value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount
+                    Price
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     required
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                     className="input-field"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={formData.payment_method}
+                    onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">Select payment method</option>
+                    <option value="Bank A Debit">Bank A Debit</option>
+                    <option value="Bank A Credit">Bank A Credit</option>
+                    <option value="Bank B Debit">Bank B Debit</option>
+                    <option value="Bank B Credit">Bank B Credit</option>
+                    <option value="Cash">Cash</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -336,9 +349,20 @@ export default function Expenses() {
                   <input
                     type="date"
                     required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    value={formData.date_purchased}
+                    onChange={(e) => setFormData({ ...formData, date_purchased: e.target.value })}
                     className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="input-field"
+                    rows={3}
                   />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">

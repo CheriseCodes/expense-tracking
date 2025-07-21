@@ -43,32 +43,37 @@ export interface CategoryUpdate {
 }
 
 export interface Expense {
-  id: string;
+  expense_id: string;
   user_id: string;
-  category_id: string;
-  amount: number;
-  description: string;
-  date: string;
+  item: string;
+  vendor: string;
+  price: number;
+  date_purchased: string;
+  payment_method?: string;
+  notes?: string;
   created_at: string;
-  updated_at: string;
   user?: User;
   category?: Category;
 }
 
 export interface ExpenseCreate {
   user_id: string;
-  category_id: string;
-  amount: number;
-  description: string;
-  date: string;
+  item: string;
+  vendor: string;
+  price: number;
+  date_purchased: string;
+  payment_method?: string;
+  notes?: string;
 }
 
 export interface ExpenseUpdate {
   user_id?: string;
-  category_id?: string;
-  amount?: number;
-  description?: string;
-  date?: string;
+  item?: string;
+  vendor?: string;
+  price?: number;
+  date_purchased?: string;
+  payment_method?: string;
+  notes?: string;
 }
 
 export interface WishlistItem {
