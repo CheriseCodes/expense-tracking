@@ -6,6 +6,9 @@ real_data/
 my_notes.txt
 notes.txt
 
+# CSV files - ignore purchases.csv but keep sample data
+*-purchases.csv
+
 # Cursor
 .cursor/
 
