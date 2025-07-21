@@ -49,6 +49,7 @@ python /path/to/project/scripts/python/import_csv_data.py
    - Maps CSV columns to database fields
    - Creates categories automatically based on the "Item" field
    - Converts date numbers to actual dates (using current month/year)
+   - Imports payment method information
    - Handles data validation and error logging
    - Strips whitespace from all text fields
 5. **Creates relationships** between expenses and categories
@@ -61,6 +62,7 @@ The script expects tab-separated CSV files with these columns:
 - `Vendor`: Where the purchase was made
 - `Price`: The amount spent
 - `Date`: Day of the month (1-31)
+- `Method`: Payment method used (optional)
 - `Notes`: Optional notes about the expense
 
 ## Output

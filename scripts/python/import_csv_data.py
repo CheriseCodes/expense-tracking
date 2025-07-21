@@ -134,7 +134,7 @@ class CSVImporter:
             raise
     
     def import_expense(self, user_id: str, item: str, vendor: str, price: float, 
-                      purchase_date: int, notes: str = None) -> str:
+                      purchase_date: int, method: str = None, notes: str = None) -> str:
         """Import a single expense record"""
         try:
             expense_id = str(uuid.uuid4())
@@ -145,8 +145,8 @@ class CSVImporter:
             
             # Insert expense
             self.cursor.execute("""
-                INSERT INTO expenses (expense_id, user_id, item, vendor, price, date_purchased, notes, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO expenses (expense_id, user_id, item, vendor, price, date_purchased, payment_method, notes, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 expense_id,
                 user_id,
@@ -154,6 +154,7 @@ class CSVImporter:
                 vendor,
                 price,
                 purchase_date_obj,
+                method,
                 notes,
                 datetime.now()
             ))
@@ -188,6 +189,7 @@ class CSVImporter:
                         vendor = row.get('Vendor', '').strip()
                         price_str = row.get('Price', '0').strip()
                         date_str = row.get('Date', '1').strip()
+                        method = row.get('Method', '').strip()
                         notes = row.get('Notes', '').strip()
                         
                         # Validate required fields
@@ -219,6 +221,7 @@ class CSVImporter:
                             vendor=vendor,
                             price=price,
                             purchase_date=purchase_date,
+                            method=method if method else None,
                             notes=notes if notes else None
                         )
                         

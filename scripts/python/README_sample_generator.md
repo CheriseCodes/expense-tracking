@@ -52,6 +52,7 @@ The generated CSV files have these columns:
 - `Vendor`: Where the purchase was made
 - `Price`: Amount spent (0-40 range)
 - `Date`: Day of the month (1-31)
+- `Method`: Payment method used (Bank A Debit, Bank A Credit, Bank B Debit, Bank B Credit, Cash)
 - `Notes`: Optional notes about the expense
 
 ## Sample Categories
@@ -67,6 +68,14 @@ The generated CSV files have these columns:
 - Telus, Rens Pets, Sobeys, Presto
 - Walmart, Shoppers Drug Mart, Freshco
 - And many more...
+
+## Payment Methods
+
+- Bank A Debit
+- Bank A Credit  
+- Bank B Debit
+- Bank B Credit
+- Cash
 
 ## Integration with Import Script
 

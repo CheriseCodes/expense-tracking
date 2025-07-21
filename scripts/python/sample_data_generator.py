@@ -37,6 +37,11 @@ vendors = ['NSLSC', 'Ticketmaster', 'Amazon', 'Canadian Tire',
 fake_vendors = pd.Series([random.choice(vendors)
                          for _ in range(num_of_purchases)])
 
+# Payment methods
+payment_methods = ['Bank A Debit', 'Bank A Credit', 'Bank B Debit', 'Bank B Credit', 'Cash']
+
+fake_methods = pd.Series([random.choice(payment_methods) for _ in range(num_of_purchases)])
+
 # Fake notes
 fake = Faker()
 fake_notes = pd.Series([random.choice(['', '', fake.sentence(nb_words=5)])
@@ -50,7 +55,7 @@ fake_prices = pd.Series(
 fake_dates = pd.Series(np.random.randint(1, 31, size=(num_of_purchases)))
 
 purchases = pd.DataFrame({'Item': fake_items, 'Vendor': fake_vendors,
-                         'Price': fake_prices, 'Date': fake_dates, 'Notes': fake_notes})
+                         'Price': fake_prices, 'Date': fake_dates, 'Method': fake_methods, 'Notes': fake_notes})
 print(f"Final result...")
 print(purchases)
 
