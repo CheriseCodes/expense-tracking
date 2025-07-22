@@ -4,9 +4,7 @@ import {
   TagIcon, 
   CurrencyDollarIcon, 
   HeartIcon, 
-  ChartBarIcon,
-  ArrowUpIcon,
-  ArrowDownIcon
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { userApi, categoryApi, expenseApi, wishlistApi, budgetApi } from '../services/api';
 import type { User, Category, Expense, WishlistItem, Budget } from '../types/api';
@@ -35,6 +33,9 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeBudgets, setActiveBudgets] = useState(0);
+  const [totalBudgets, setTotalBudgets] = useState(0);
+  const [overBudgetCount, setOverBudgetCount] = useState(0);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -57,26 +58,40 @@ export default function Dashboard() {
         ]);
 
         // Handle the response data - the API returns arrays directly
-        const users = Array.isArray(usersResponse.data) ? usersResponse.data : [];
-        const categories = Array.isArray(categoriesResponse.data) ? categoriesResponse.data : [];
-        const expenses = Array.isArray(expensesResponse.data) ? expensesResponse.data : [];
-        const wishlistItems = Array.isArray(wishlistResponse.data) ? wishlistResponse.data : [];
-        const budgets = Array.isArray(budgetsResponse.data) ? budgetsResponse.data : [];
+        const users = Array.isArray(usersResponse) ? usersResponse : [];
+        const categories = Array.isArray(categoriesResponse) ? categoriesResponse : [];
+        const expenses = Array.isArray(expensesResponse) ? expensesResponse : [];
+        const wishlistItems = Array.isArray(wishlistResponse) ? wishlistResponse : [];
+        const budgets = Array.isArray(budgetsResponse) ? budgetsResponse : [];
 
-        const totalExpenseAmount = expenses.reduce((sum: number, expense: any) => sum + expense.amount, 0);
-        const totalWishlistAmount = wishlistItems.reduce((sum: number, item: any) => sum + item.estimated_cost, 0);
-        const totalBudgetAmount = budgets.reduce((sum: number, budget: any) => sum + budget.amount, 0);
+        const totalExpenseAmount = expenses.reduce((sum: number, expense: Expense) => sum + expense.price, 0);
+        const totalWishlistAmount = wishlistItems.reduce((sum: number, item: WishlistItem) => sum + item.price, 0);
+        const totalBudgetAmount = budgets.reduce((sum: number, budget: Budget) => sum + budget.max_spend, 0);
+        
+        // Calculate additional metrics
+        const activeBudgetsCount = budgets.filter(budget => {
+          const now = new Date();
+          const start = new Date(budget.start_date);
+          const end = new Date(budget.end_date);
+          return now >= start && now <= end;
+        }).length;
+        
+        const overBudgetCount = budgets.filter(budget => budget.is_over_max).length;
 
         setStats({
           totalUsers: users.length,
           totalCategories: categories.length,
           totalExpenses: expenses.length,
           totalWishlistItems: wishlistItems.length,
-          totalBudgets: budgets.length,
+          totalBudgets: activeBudgetsCount, // Show active budgets instead of total
           totalExpenseAmount,
           totalWishlistAmount,
           totalBudgetAmount,
         });
+        
+        setActiveBudgets(activeBudgetsCount);
+        setTotalBudgets(budgets.length);
+        setOverBudgetCount(overBudgetCount);
       } catch (err) {
         setError('Failed to load dashboard data');
         console.error('Dashboard error:', err);
@@ -116,40 +131,35 @@ export default function Dashboard() {
       value: stats.totalUsers,
       icon: UserGroupIcon,
       color: 'bg-blue-500',
-      change: '+12%',
-      changeType: 'increase' as const,
+      subtitle: 'Registered users',
     },
     {
       title: 'Categories',
       value: stats.totalCategories,
       icon: TagIcon,
       color: 'bg-green-500',
-      change: '+5%',
-      changeType: 'increase' as const,
+      subtitle: 'Expense categories',
     },
     {
       title: 'Total Expenses',
       value: stats.totalExpenses,
       icon: CurrencyDollarIcon,
       color: 'bg-yellow-500',
-      change: '+8%',
-      changeType: 'increase' as const,
+      subtitle: 'Tracked expenses',
     },
     {
       title: 'Wishlist Items',
       value: stats.totalWishlistItems,
       icon: HeartIcon,
       color: 'bg-pink-500',
-      change: '+3%',
-      changeType: 'increase' as const,
+      subtitle: 'Planned purchases',
     },
     {
       title: 'Active Budgets',
       value: stats.totalBudgets,
       icon: ChartBarIcon,
       color: 'bg-purple-500',
-      change: '+15%',
-      changeType: 'increase' as const,
+      subtitle: `${activeBudgets} active / ${totalBudgets} total`,
     },
   ];
 
@@ -168,23 +178,12 @@ export default function Dashboard() {
               <div className={`p-2 rounded-lg ${stat.color}`}>
                 <stat.icon className="h-6 w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
-              </div>
+                          <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+              <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+              <p className="text-xs text-gray-500">{stat.subtitle}</p>
             </div>
-            <div className="mt-4 flex items-center">
-              {stat.changeType === 'increase' ? (
-                <ArrowUpIcon className="h-4 w-4 text-green-500" />
-              ) : (
-                <ArrowDownIcon className="h-4 w-4 text-red-500" />
-              )}
-              <span className={`ml-1 text-sm ${
-                stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {stat.change}
-              </span>
-            </div>
+          </div>
           </div>
         ))}
       </div>
@@ -212,6 +211,18 @@ export default function Dashboard() {
                 ${stats.totalBudgetAmount.toFixed(2)}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Active Budgets:</span>
+              <span className="font-semibold text-blue-600">
+                {activeBudgets} / {totalBudgets}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Over Budget:</span>
+              <span className={`font-semibold ${overBudgetCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {overBudgetCount} budgets
+              </span>
+            </div>
             <hr />
             <div className="flex justify-between">
               <span className="text-gray-900 font-medium">Remaining Budget:</span>
@@ -229,17 +240,29 @@ export default function Dashboard() {
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full btn-primary">
+            <button 
+              onClick={() => window.location.href = '/expenses'}
+              className="w-full btn-primary"
+            >
               Add New Expense
             </button>
-            <button className="w-full btn-secondary">
+            <button 
+              onClick={() => window.location.href = '/budgets'}
+              className="w-full btn-secondary"
+            >
               Create Budget
             </button>
-            <button className="w-full btn-secondary">
+            <button 
+              onClick={() => window.location.href = '/wishlist'}
+              className="w-full btn-secondary"
+            >
               Add Wishlist Item
             </button>
-            <button className="w-full btn-secondary">
-              View Reports
+            <button 
+              onClick={() => window.location.href = '/categories'}
+              className="w-full btn-secondary"
+            >
+              Manage Categories
             </button>
           </div>
         </div>
