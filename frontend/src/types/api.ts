@@ -2,44 +2,36 @@ export interface User {
   user_id: string;
   username: string;
   email: string;
-  full_name: string;
+  role: string;
   created_at: string;
-  updated_at: string;
+  last_login: string;
 }
 
 export interface UserCreate {
   username: string;
   email: string;
-  full_name: string;
-  password: string;
+  role: string;
+  password_hash: string;
 }
 
 export interface UserUpdate {
   username?: string;
   email?: string;
-  full_name?: string;
-  password?: string;
+  role?: string;
+  password_hash?: string;
 }
 
 export interface Category {
   category_id: string;
   category_name: string;
-  category_description: string;
-  color: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface CategoryCreate {
-  name: string;
-  description: string;
-  color: string;
+  category_name: string;
 }
 
 export interface CategoryUpdate {
-  name?: string;
-  description?: string;
-  color?: string;
+  category_name?: string;
 }
 
 export interface Expense {

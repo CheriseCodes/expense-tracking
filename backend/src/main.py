@@ -54,7 +54,7 @@ app.add_middleware(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # In production, specify your frontend URL
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],  # In production, specify your frontend URL
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
@@ -107,7 +107,14 @@ def read_user(user_id: UUID, db: Session = Depends(get_db)):
 @app.post("/users/", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
 def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
-    return create_user(db=db, user=user)
+    print(f"Received user data: {user}")
+    try:
+        result = create_user(db=db, user=user)
+        print(f"User created successfully: {result}")
+        return result
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        raise
 
 @app.put("/users/{user_id}", response_model=UserSchema)
 def update_existing_user(user_id: UUID, user: UserUpdate, db: Session = Depends(get_db)):

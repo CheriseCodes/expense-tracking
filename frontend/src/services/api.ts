@@ -53,107 +53,162 @@ api.interceptors.response.use(
 
 // User API
 export const userApi = {
-  getAll: (): Promise<AxiosResponse<ApiResponse<User[]>>> => 
-    api.get('/users/'),
+  async getAll(): Promise<User[]> {
+    const response = await api.get('/users/');
+    return Array.isArray(response.data) ? response.data : [];
+  },
   
-  getById: (id: string): Promise<AxiosResponse<ApiResponse<User>>> => 
-    api.get(`/users/${id}`),
+  async getById(id: string): Promise<User | null> {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
   
-  create: (user: UserCreate): Promise<AxiosResponse<ApiResponse<User>>> => 
-    api.post('/users/', user),
+  async create(user: UserCreate): Promise<User> {
+    const response = await api.post('/users/', user);
+    return response.data;
+  },
   
-  update: (id: string, user: UserUpdate): Promise<AxiosResponse<ApiResponse<User>>> => 
-    api.put(`/users/${id}`, user),
+  async update(id: string, user: UserUpdate): Promise<User> {
+    const response = await api.put(`/users/${id}`, user);
+    return response.data;
+  },
   
-  delete: (id: string): Promise<AxiosResponse<ApiResponse<null>>> => 
-    api.delete(`/users/${id}`),
+  async delete(id: string): Promise<void> {
+    await api.delete(`/users/${id}`);
+  },
 };
 
 // Category API
 export const categoryApi = {
-  getAll: (): Promise<AxiosResponse<ApiResponse<Category[]>>> => 
-    api.get('/categories/'),
+  async getAll(): Promise<Category[]> {
+    const response = await api.get('/categories/');
+    return Array.isArray(response.data) ? response.data : [];
+  },
   
-  getById: (id: string): Promise<AxiosResponse<ApiResponse<Category>>> => 
-    api.get(`/categories/${id}`),
+  async getById(id: string): Promise<Category | null> {
+    const response = await api.get(`/categories/${id}`);
+    return response.data;
+  },
   
-  create: (category: CategoryCreate): Promise<AxiosResponse<ApiResponse<Category>>> => 
-    api.post('/categories/', category),
+  async create(category: CategoryCreate): Promise<Category> {
+    const response = await api.post('/categories/', category);
+    return response.data;
+  },
   
-  update: (id: string, category: CategoryUpdate): Promise<AxiosResponse<ApiResponse<Category>>> => 
-    api.put(`/categories/${id}`, category),
+  async update(id: string, category: CategoryUpdate): Promise<Category> {
+    const response = await api.put(`/categories/${id}`, category);
+    return response.data;
+  },
   
-  delete: (id: string): Promise<AxiosResponse<ApiResponse<null>>> => 
-    api.delete(`/categories/${id}`),
+  async delete(id: string): Promise<void> {
+    await api.delete(`/categories/${id}`);
+  },
 };
 
 // Expense API
 export const expenseApi = {
-  getAll: (): Promise<AxiosResponse<ApiResponse<Expense[]>>> => 
-    api.get('/expenses/'),
+  async getAll(): Promise<Expense[]> {
+    const response = await api.get('/expenses/');
+    return Array.isArray(response.data) ? response.data : [];
+  },
   
-  getById: (id: string): Promise<AxiosResponse<ApiResponse<Expense>>> => 
-    api.get(`/expenses/${id}`),
+  async getById(id: string): Promise<Expense | null> {
+    const response = await api.get(`/expenses/${id}`);
+    return response.data;
+  },
   
-  create: (expense: ExpenseCreate): Promise<AxiosResponse<ApiResponse<Expense>>> => 
-    api.post('/expenses/', expense),
+  async create(expense: ExpenseCreate): Promise<Expense> {
+    const response = await api.post('/expenses/', expense);
+    return response.data;
+  },
   
-  update: (id: string, expense: ExpenseUpdate): Promise<AxiosResponse<ApiResponse<Expense>>> => 
-    api.put(`/expenses/${id}`, expense),
+  async update(id: string, expense: ExpenseUpdate): Promise<Expense> {
+    const response = await api.put(`/expenses/${id}`, expense);
+    return response.data;
+  },
   
-  delete: (id: string): Promise<AxiosResponse<ApiResponse<null>>> => 
-    api.delete(`/expenses/${id}`),
+  async delete(id: string): Promise<void> {
+    await api.delete(`/expenses/${id}`);
+  },
   
-  getByUserId: (userId: string): Promise<AxiosResponse<ApiResponse<Expense[]>>> => 
-    api.get(`/expenses/user/${userId}`),
+  async getByUserId(userId: string): Promise<Expense[]> {
+    const response = await api.get(`/expenses/user/${userId}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
   
-  getByCategoryId: (categoryId: string): Promise<AxiosResponse<ApiResponse<Expense[]>>> => 
-    api.get(`/expenses/category/${categoryId}`),
+  async getByCategoryId(categoryId: string): Promise<Expense[]> {
+    const response = await api.get(`/expenses/category/${categoryId}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
 };
 
 // Wishlist API
 export const wishlistApi = {
-  getAll: (): Promise<AxiosResponse<ApiResponse<WishlistItem[]>>> => 
-    api.get('/wishlist/'),
+  async getAll(): Promise<WishlistItem[]> {
+    const response = await api.get('/wishlist/');
+    return Array.isArray(response.data) ? response.data : [];
+  },
   
-  getById: (id: string): Promise<AxiosResponse<ApiResponse<WishlistItem>>> => 
-    api.get(`/wishlist/${id}`),
+  async getById(id: string): Promise<WishlistItem | null> {
+    const response = await api.get(`/wishlist/${id}`);
+    return response.data;
+  },
   
-  create: (item: WishlistItemCreate): Promise<AxiosResponse<ApiResponse<WishlistItem>>> => 
-    api.post('/wishlist/', item),
+  async create(item: WishlistItemCreate): Promise<WishlistItem> {
+    const response = await api.post('/wishlist/', item);
+    return response.data;
+  },
   
-  update: (id: string, item: WishlistItemUpdate): Promise<AxiosResponse<ApiResponse<WishlistItem>>> => 
-    api.put(`/wishlist/${id}`, item),
+  async update(id: string, item: WishlistItemUpdate): Promise<WishlistItem> {
+    const response = await api.put(`/wishlist/${id}`, item);
+    return response.data;
+  },
   
-  delete: (id: string): Promise<AxiosResponse<ApiResponse<null>>> => 
-    api.delete(`/wishlist/${id}`),
+  async delete(id: string): Promise<void> {
+    await api.delete(`/wishlist/${id}`);
+  },
   
-  getByUserId: (userId: string): Promise<AxiosResponse<ApiResponse<WishlistItem[]>>> => 
-    api.get(`/wishlist/user/${userId}`),
+  async getByUserId(userId: string): Promise<WishlistItem[]> {
+    const response = await api.get(`/wishlist/user/${userId}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
 };
 
 // Budget API
 export const budgetApi = {
-  getAll: (): Promise<AxiosResponse<ApiResponse<Budget[]>>> => 
-    api.get('/budgets/'),
+  async getAll(): Promise<Budget[]> {
+    const response = await api.get('/budgets/');
+    return Array.isArray(response.data) ? response.data : [];
+  },
   
-  getById: (id: string): Promise<AxiosResponse<ApiResponse<Budget>>> => 
-    api.get(`/budgets/${id}`),
+  async getById(id: string): Promise<Budget | null> {
+    const response = await api.get(`/budgets/${id}`);
+    return response.data;
+  },
   
-  create: (budget: BudgetCreate): Promise<AxiosResponse<ApiResponse<Budget>>> => 
-    api.post('/budgets/', budget),
+  async create(budget: BudgetCreate): Promise<Budget> {
+    const response = await api.post('/budgets/', budget);
+    return response.data;
+  },
   
-  update: (id: string, budget: BudgetUpdate): Promise<AxiosResponse<ApiResponse<Budget>>> => 
-    api.put(`/budgets/${id}`, budget),
+  async update(id: string, budget: BudgetUpdate): Promise<Budget> {
+    const response = await api.put(`/budgets/${id}`, budget);
+    return response.data;
+  },
   
-  delete: (id: string): Promise<AxiosResponse<ApiResponse<null>>> => 
-    api.delete(`/budgets/${id}`),
+  async delete(id: string): Promise<void> {
+    await api.delete(`/budgets/${id}`);
+  },
   
-  getByUserId: (userId: string): Promise<AxiosResponse<ApiResponse<Budget[]>>> => 
-    api.get(`/budgets/user/${userId}`),
+  async getByUserId(userId: string): Promise<Budget[]> {
+    const response = await api.get(`/budgets/user/${userId}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
   
-  getByCategoryId: (categoryId: string): Promise<AxiosResponse<ApiResponse<Budget[]>>> => 
-    api.get(`/budgets/category/${categoryId}`),
+  async getByCategoryId(categoryId: string): Promise<Budget[]> {
+    const response = await api.get(`/budgets/category/${categoryId}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
 };
 
 export default api; 

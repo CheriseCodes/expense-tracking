@@ -4,8 +4,8 @@ CREATE TABLE users (
 	email varchar NOT NULL,
 	password_hash char(73) NOT NULL, -- max length using bcrypt is 72
 	role varchar(30) NOT NULL, -- regular user, admin or something else
-	created_at timestamp NOT NULL,
-	last_login timestamp NOT NULL,
+	created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	last_login timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         categories bigint[], -- array of category ids
 	PRIMARY KEY(user_id)
 );
@@ -25,7 +25,7 @@ CREATE TABLE expenses (
 	date_purchased date NOT NULL,
 	payment_method varchar,
 	notes varchar,
-	created_at timestamp NOT NULL,
+	created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (expense_id, user_id),
 	CONSTRAINT fk_user
 		FOREIGN KEY(user_id)
@@ -57,7 +57,7 @@ CREATE TABLE wishlist (
 	status varchar(20) NOT NULL, -- wished, scheduled, bought
 	notes varchar,
 	planned_date date,
-	created_at timestamp,
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (wish_id, user_id),
         CONSTRAINT fk_user
                 FOREIGN KEY(user_id)
