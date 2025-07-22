@@ -4,7 +4,8 @@ import {
   PencilIcon, 
   TrashIcon, 
   MagnifyingGlassIcon,
-  FunnelIcon
+  FunnelIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { expenseApi, userApi, categoryApi } from '../services/api';
 import type { Expense, ExpenseCreate, ExpenseUpdate, User, Category } from '../types/api';
@@ -13,11 +14,24 @@ interface ExpenseFormData {
   user_id: string;
   item: string;
   vendor: string;
-  price: number;
+  price: string; // Changed to string for currency validation
   date_purchased: string;
   payment_method?: string;
   notes?: string;
+  selected_categories: string[]; // Array of category IDs
 }
+
+// Currency validation function
+const validateCurrency = (value: string): boolean => {
+  const currencyRegex = /^\d*\.?\d{0,2}$/;
+  return currencyRegex.test(value);
+};
+
+// Format currency for display
+const formatCurrency = (value: string): string => {
+  const num = parseFloat(value);
+  return isNaN(num) ? '0.00' : num.toFixed(2);
+};
 
 export default function Expenses() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -32,10 +46,11 @@ export default function Expenses() {
     user_id: '',
     item: '',
     vendor: '',
-    price: 0,
+    price: '',
     date_purchased: new Date().toISOString().split('T')[0],
     payment_method: '',
-    notes: ''
+    notes: '',
+    selected_categories: []
   });
 
   useEffect(() => {
@@ -51,9 +66,9 @@ export default function Expenses() {
         userApi.getAll(),
         categoryApi.getAll()
       ]);
-      setExpenses(Array.isArray(expensesResponse.data) ? expensesResponse.data : []);
-      setUsers(Array.isArray(usersResponse.data) ? usersResponse.data : []);
-      setCategories(Array.isArray(categoriesResponse.data) ? categoriesResponse.data : []);
+      setExpenses(Array.isArray(expensesResponse) ? expensesResponse : []);
+      setUsers(Array.isArray(usersResponse) ? usersResponse : []);
+      setCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
     } catch (err) {
       setError('Failed to load data');
       console.error('Expenses error:', err);
@@ -64,12 +79,45 @@ export default function Expenses() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate price format
+    if (!validateCurrency(formData.price)) {
+      setError('Price must be in valid currency format (e.g., 10.50)');
+      return;
+    }
+
+    const price = parseFloat(formData.price);
+    if (isNaN(price) || price <= 0) {
+      setError('Price must be a positive number');
+      return;
+    }
+
     try {
+      const expenseData = {
+        user_id: formData.user_id,
+        item: formData.item,
+        vendor: formData.vendor,
+        price: price,
+        date_purchased: formData.date_purchased,
+        payment_method: formData.payment_method || undefined,
+        notes: formData.notes || undefined
+      };
+
       if (editingExpense) {
-        await expenseApi.update(editingExpense.expense_id, formData);
+        await expenseApi.update(editingExpense.expense_id, expenseData);
       } else {
-        await expenseApi.create(formData);
+        const newExpense = await expenseApi.create(expenseData);
+        
+        // Add categories to the new expense
+        for (const categoryId of formData.selected_categories) {
+          try {
+            await expenseApi.addCategory(newExpense.expense_id, categoryId);
+          } catch (err) {
+            console.error('Failed to add category to expense:', err);
+          }
+        }
       }
+      
       setShowModal(false);
       setEditingExpense(null);
       resetForm();
@@ -86,10 +134,11 @@ export default function Expenses() {
       user_id: expense.user_id,
       item: expense.item,
       vendor: expense.vendor,
-      price: expense.price,
+      price: expense.price.toString(),
       date_purchased: expense.date_purchased.split('T')[0],
       payment_method: expense.payment_method || '',
-      notes: expense.notes || ''
+      notes: expense.notes || '',
+      selected_categories: [] // TODO: Load existing categories for this expense
     });
     setShowModal(true);
   };
@@ -111,11 +160,27 @@ export default function Expenses() {
       user_id: '',
       item: '',
       vendor: '',
-      price: 0,
+      price: '',
       date_purchased: new Date().toISOString().split('T')[0],
       payment_method: '',
-      notes: ''
+      notes: '',
+      selected_categories: []
     });
+  };
+
+  const handlePriceChange = (value: string) => {
+    if (validateCurrency(value) || value === '') {
+      setFormData({ ...formData, price: value });
+    }
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selected_categories: prev.selected_categories.includes(categoryId)
+        ? prev.selected_categories.filter(id => id !== categoryId)
+        : [...prev.selected_categories, categoryId]
+    }));
   };
 
   const filteredExpenses = expenses.filter(expense =>
@@ -263,7 +328,7 @@ export default function Expenses() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-[500px] shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 {editingExpense ? 'Edit Expense' : 'Add New Expense'}
@@ -279,6 +344,7 @@ export default function Expenses() {
                     value={formData.item}
                     onChange={(e) => setFormData({ ...formData, item: e.target.value })}
                     className="input-field"
+                    placeholder="e.g., Groceries, Gas, Dinner"
                   />
                 </div>
                 <div>
@@ -291,6 +357,7 @@ export default function Expenses() {
                     value={formData.vendor}
                     onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                     className="input-field"
+                    placeholder="e.g., Walmart, Shell, Restaurant Name"
                   />
                 </div>
                 <div>
@@ -315,32 +382,61 @@ export default function Expenses() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Price
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="text"
+                      required
+                      value={formData.price}
+                      onChange={(e) => handlePriceChange(e.target.value)}
+                      className="input-field pl-8"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter amount in format: 10.50 (up to 2 decimal places)
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Payment Method
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={formData.payment_method}
                     onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                     className="input-field"
-                  >
-                    <option value="">Select payment method</option>
-                    <option value="Bank A Debit">Bank A Debit</option>
-                    <option value="Bank A Credit">Bank A Credit</option>
-                    <option value="Bank B Debit">Bank B Debit</option>
-                    <option value="Bank B Credit">Bank B Credit</option>
-                    <option value="Cash">Cash</option>
-                  </select>
+                    placeholder="e.g., Credit Card, Cash, Bank Transfer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Categories
+                  </label>
+                  <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
+                    {categories.length === 0 ? (
+                      <p className="text-sm text-gray-500">No categories available</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {categories.map((category) => (
+                          <label key={category.category_id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.selected_categories.includes(category.category_id)}
+                              onChange={() => toggleCategory(category.category_id)}
+                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">
+                              {category.category_name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select 0 or more categories for this expense
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -363,6 +459,7 @@ export default function Expenses() {
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="input-field"
                     rows={3}
+                    placeholder="Optional notes about this expense"
                   />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">

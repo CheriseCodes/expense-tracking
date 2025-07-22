@@ -140,6 +140,15 @@ export const expenseApi = {
     const response = await api.get(`/expenses/category/${categoryId}`);
     return Array.isArray(response.data) ? response.data : [];
   },
+
+  // Expense Category Management
+  async addCategory(expenseId: string, categoryId: string): Promise<void> {
+    await api.post(`/expenses/${expenseId}/categories/${categoryId}`);
+  },
+
+  async removeCategory(expenseId: string, categoryId: string): Promise<void> {
+    await api.delete(`/expenses/${expenseId}/categories/${categoryId}`);
+  },
 };
 
 // Wishlist API
