@@ -12,18 +12,19 @@ import type { Budget, BudgetCreate, BudgetUpdate, User, Category } from '../type
 interface BudgetFormData {
   user_id: string;
   category_id: string;
-  amount: number;
-  period: string;
+  current_spend: string; // Changed to string for currency validation
+  future_spend: string; // Changed to string for currency validation
+  max_spend: string; // Changed to string for currency validation
+  is_over_max: boolean;
   start_date: string;
   end_date: string;
 }
 
-const periodOptions = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'yearly', label: 'Yearly' },
-];
+// Currency validation function
+const validateCurrency = (value: string): boolean => {
+  const currencyRegex = /^\d*\.?\d{0,2}$/;
+  return currencyRegex.test(value);
+};
 
 export default function Budgets() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -37,8 +38,10 @@ export default function Budgets() {
   const [formData, setFormData] = useState<BudgetFormData>({
     user_id: '',
     category_id: '',
-    amount: 0,
-    period: 'monthly',
+    current_spend: '',
+    future_spend: '',
+    max_spend: '',
+    is_over_max: false,
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
@@ -56,9 +59,10 @@ export default function Budgets() {
         userApi.getAll(),
         categoryApi.getAll()
       ]);
-      setBudgets(Array.isArray(budgetsResponse.data) ? budgetsResponse.data : []);
-      setUsers(Array.isArray(usersResponse.data) ? usersResponse.data : []);
-      setCategories(Array.isArray(categoriesResponse.data) ? categoriesResponse.data : []);
+
+      setBudgets(Array.isArray(budgetsResponse) ? budgetsResponse : []);
+      setUsers(Array.isArray(usersResponse) ? usersResponse : []);
+      setCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
     } catch (err) {
       setError('Failed to load data');
       console.error('Budgets error:', err);
@@ -69,11 +73,59 @@ export default function Budgets() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate all currency fields
+    const fieldsToValidate = [
+      { name: 'Current Spend', value: formData.current_spend },
+      { name: 'Future Spend', value: formData.future_spend },
+      { name: 'Max Spend', value: formData.max_spend }
+    ];
+
+    for (const field of fieldsToValidate) {
+      if (!validateCurrency(field.value)) {
+        setError(`${field.name} must be in valid currency format (e.g., 10.50)`);
+        return;
+      }
+    }
+
+    const currentSpend = parseFloat(formData.current_spend);
+    const futureSpend = parseFloat(formData.future_spend);
+    const maxSpend = parseFloat(formData.max_spend);
+
+    if (isNaN(currentSpend) || currentSpend < 0) {
+      setError('Current spend must be a non-negative number');
+      return;
+    }
+
+    if (isNaN(futureSpend) || futureSpend < 0) {
+      setError('Future spend must be a non-negative number');
+      return;
+    }
+
+    if (isNaN(maxSpend) || maxSpend <= 0) {
+      setError('Max spend must be a positive number');
+      return;
+    }
+
+    // Calculate if over max
+    const isOverMax = (currentSpend + futureSpend) > maxSpend;
+
     try {
+      const budgetData = {
+        user_id: formData.user_id,
+        category_id: formData.category_id,
+        current_spend: currentSpend,
+        future_spend: futureSpend,
+        max_spend: maxSpend,
+        is_over_max: isOverMax,
+        start_date: formData.start_date,
+        end_date: formData.end_date
+      };
+
       if (editingBudget) {
-        await budgetApi.update(editingBudget.id, formData);
+        await budgetApi.update(editingBudget.budget_id, budgetData);
       } else {
-        await budgetApi.create(formData);
+        await budgetApi.create(budgetData);
       }
       setShowModal(false);
       setEditingBudget(null);
@@ -90,8 +142,10 @@ export default function Budgets() {
     setFormData({
       user_id: budget.user_id,
       category_id: budget.category_id,
-      amount: budget.amount,
-      period: budget.period,
+      current_spend: budget.current_spend.toString(),
+      future_spend: budget.future_spend.toString(),
+      max_spend: budget.max_spend.toString(),
+      is_over_max: budget.is_over_max,
       start_date: budget.start_date.split('T')[0],
       end_date: budget.end_date.split('T')[0],
     });
@@ -114,20 +168,36 @@ export default function Budgets() {
     setFormData({
       user_id: '',
       category_id: '',
-      amount: 0,
-      period: 'monthly',
+      current_spend: '',
+      future_spend: '',
+      max_spend: '',
+      is_over_max: false,
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
   };
 
-  const filteredBudgets = budgets.filter(budget =>
-    budget.user?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    budget.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    budget.period.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleCurrencyChange = (field: keyof Pick<BudgetFormData, 'current_spend' | 'future_spend' | 'max_spend'>, value: string) => {
+    if (validateCurrency(value) || value === '') {
+      setFormData({ ...formData, [field]: value });
+    }
+  };
 
-  const totalBudget = filteredBudgets.reduce((sum, budget) => sum + budget.amount, 0);
+  const filteredBudgets = budgets.filter(budget => {
+    if (!searchTerm) return true;
+    
+    const user = users.find(u => u.user_id === budget.user_id);
+    const category = categories.find(c => c.category_id === budget.category_id);
+    
+    return (
+      user?.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      category?.category_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
+  const totalMaxBudget = filteredBudgets.reduce((sum, budget) => sum + budget.max_spend, 0);
+  const totalCurrentSpend = filteredBudgets.reduce((sum, budget) => sum + budget.current_spend, 0);
+  const totalFutureSpend = filteredBudgets.reduce((sum, budget) => sum + budget.future_spend, 0);
 
   const isActive = (budget: Budget) => {
     const now = new Date();
@@ -184,10 +254,13 @@ export default function Budgets() {
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-gray-900">
-            ${totalBudget.toFixed(2)}
+            ${totalMaxBudget.toFixed(2)}
           </div>
           <div className="text-sm text-gray-600">
             Total Budget ({filteredBudgets.length} budgets)
+          </div>
+          <div className="text-sm text-gray-500">
+            Current: ${totalCurrentSpend.toFixed(2)} | Future: ${totalFutureSpend.toFixed(2)}
           </div>
         </div>
       </div>
@@ -195,14 +268,14 @@ export default function Budgets() {
       {/* Budgets Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredBudgets.map((budget) => (
-          <div key={budget.id} className="card hover:shadow-lg transition-shadow">
+          <div key={budget.budget_id} className="card hover:shadow-lg transition-shadow">
             <div className="flex items-start justify-between">
               <div className="flex items-center">
                 <ChartBarIcon className="h-6 w-6 text-primary-600 mr-3" />
                 <div>
                   <div className="flex items-center space-x-2">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      ${budget.amount.toFixed(2)}
+                      ${budget.max_spend.toFixed(2)}
                     </h3>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       isActive(budget) 
@@ -211,9 +284,14 @@ export default function Budgets() {
                     }`}>
                       {isActive(budget) ? 'Active' : 'Inactive'}
                     </span>
+                    {budget.is_over_max && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Over Budget
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    {budget.category?.name || 'Uncategorized'}
+                    {categories.find(c => c.category_id === budget.category_id)?.category_name || 'Uncategorized'}
                   </p>
                 </div>
               </div>
@@ -225,7 +303,7 @@ export default function Budgets() {
                   <PencilIcon className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(budget.id)}
+                  onClick={() => handleDelete(budget.budget_id)}
                   className="text-red-600 hover:text-red-900 p-1"
                 >
                   <TrashIcon className="h-4 w-4" />
@@ -236,13 +314,25 @@ export default function Budgets() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">User:</span>
                 <span className="text-sm text-gray-900">
-                  {budget.user?.full_name || 'Unknown'}
+                  {users.find(u => u.user_id === budget.user_id)?.username || 'Unknown'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Period:</span>
-                <span className="text-sm font-medium text-gray-900 capitalize">
-                  {budget.period}
+                <span className="text-sm text-gray-600">Current Spend:</span>
+                <span className="text-sm text-gray-900">
+                  ${budget.current_spend.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Future Spend:</span>
+                <span className="text-sm text-gray-900">
+                  ${budget.future_spend.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total Spent:</span>
+                <span className={`text-sm font-medium ${budget.is_over_max ? 'text-red-600' : 'text-gray-900'}`}>
+                  ${(budget.current_spend + budget.future_spend).toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -258,9 +348,7 @@ export default function Budgets() {
                 </span>
               </div>
             </div>
-            <div className="mt-4 text-xs text-gray-500">
-              Created: {new Date(budget.created_at).toLocaleDateString()}
-            </div>
+
           </div>
         ))}
       </div>
@@ -268,7 +356,7 @@ export default function Budgets() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-[500px] shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 {editingBudget ? 'Edit Budget' : 'Add New Budget'}
@@ -286,8 +374,8 @@ export default function Budgets() {
                   >
                     <option value="">Select a user</option>
                     {users.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.full_name} (@{user.username})
+                      <option key={user.user_id} value={user.user_id}>
+                        {user.username}
                       </option>
                     ))}
                   </select>
@@ -304,42 +392,68 @@ export default function Budgets() {
                   >
                     <option value="">Select a category</option>
                     {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
+                      <option key={category.category_id} value={category.category_id}>
+                        {category.category_name}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount
+                    Current Spend
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="text"
+                      required
+                      value={formData.current_spend}
+                      onChange={(e) => handleCurrencyChange('current_spend', e.target.value)}
+                      className="input-field pl-8"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter amount in format: 10.50 (up to 2 decimal places)
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Period
+                    Future Spend
                   </label>
-                  <select
-                    required
-                    value={formData.period}
-                    onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                    className="input-field"
-                  >
-                    {periodOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="text"
+                      required
+                      value={formData.future_spend}
+                      onChange={(e) => handleCurrencyChange('future_spend', e.target.value)}
+                      className="input-field pl-8"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter amount in format: 10.50 (up to 2 decimal places)
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Max Spend
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="text"
+                      required
+                      value={formData.max_spend}
+                      onChange={(e) => handleCurrencyChange('max_spend', e.target.value)}
+                      className="input-field pl-8"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter amount in format: 10.50 (up to 2 decimal places)
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
