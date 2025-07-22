@@ -2,44 +2,36 @@ export interface User {
   user_id: string;
   username: string;
   email: string;
-  full_name: string;
+  role: string;
   created_at: string;
-  updated_at: string;
+  last_login: string;
 }
 
 export interface UserCreate {
   username: string;
   email: string;
-  full_name: string;
-  password: string;
+  role: string;
+  password_hash: string;
 }
 
 export interface UserUpdate {
   username?: string;
   email?: string;
-  full_name?: string;
-  password?: string;
+  role?: string;
+  password_hash?: string;
 }
 
 export interface Category {
   category_id: string;
   category_name: string;
-  category_description: string;
-  color: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface CategoryCreate {
-  name: string;
-  description: string;
-  color: string;
+  category_name: string;
 }
 
 export interface CategoryUpdate {
-  name?: string;
-  description?: string;
-  color?: string;
+  category_name?: string;
 }
 
 export interface Expense {
@@ -77,43 +69,51 @@ export interface ExpenseUpdate {
 }
 
 export interface WishlistItem {
-  id: string;
+  wish_id: string;
   user_id: string;
-  name: string;
-  description: string;
-  estimated_cost: number;
-  priority: string;
+  item: string;
+  vendor?: string;
+  price: number;
+  priority: number; // 1-10
+  status: string; // wished, scheduled, bought
+  notes?: string;
+  planned_date?: string;
   created_at: string;
-  updated_at: string;
   user?: User;
 }
 
 export interface WishlistItemCreate {
   user_id: string;
-  name: string;
-  description: string;
-  estimated_cost: number;
-  priority: string;
+  item: string;
+  vendor?: string;
+  price: number;
+  priority: number; // 1-10
+  status: string; // wished, scheduled, bought
+  notes?: string;
+  planned_date?: string;
 }
 
 export interface WishlistItemUpdate {
   user_id?: string;
-  name?: string;
-  description?: string;
-  estimated_cost?: number;
-  priority?: string;
+  item?: string;
+  vendor?: string;
+  price?: number;
+  priority?: number; // 1-10
+  status?: string; // wished, scheduled, bought
+  notes?: string;
+  planned_date?: string;
 }
 
 export interface Budget {
-  id: string;
+  budget_id: string;
   user_id: string;
   category_id: string;
-  amount: number;
-  period: string;
+  current_spend: number;
+  future_spend: number;
+  max_spend: number;
+  is_over_max: boolean;
   start_date: string;
   end_date: string;
-  created_at: string;
-  updated_at: string;
   user?: User;
   category?: Category;
 }
@@ -121,8 +121,10 @@ export interface Budget {
 export interface BudgetCreate {
   user_id: string;
   category_id: string;
-  amount: number;
-  period: string;
+  current_spend: number;
+  future_spend: number;
+  max_spend: number;
+  is_over_max: boolean;
   start_date: string;
   end_date: string;
 }
@@ -130,8 +132,10 @@ export interface BudgetCreate {
 export interface BudgetUpdate {
   user_id?: string;
   category_id?: string;
-  amount?: number;
-  period?: string;
+  current_spend?: number;
+  future_spend?: number;
+  max_spend?: number;
+  is_over_max?: boolean;
   start_date?: string;
   end_date?: string;
 }

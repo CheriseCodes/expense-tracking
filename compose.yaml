@@ -15,6 +15,7 @@ services:
       retries: 10
     volumes:
       - expenses-db-postgres-volume:/var/lib/postgresql/data
+      - ./scripts/sql/:/docker-entrypoint-initdb.d/
   adminer:
     image: adminer
     restart: always
