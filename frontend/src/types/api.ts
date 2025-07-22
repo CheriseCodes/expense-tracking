@@ -69,31 +69,39 @@ export interface ExpenseUpdate {
 }
 
 export interface WishlistItem {
-  id: string;
+  wish_id: string;
   user_id: string;
-  name: string;
-  description: string;
-  estimated_cost: number;
-  priority: string;
+  item: string;
+  vendor?: string;
+  price: number;
+  priority: number; // 1-10
+  status: string; // wished, scheduled, bought
+  notes?: string;
+  planned_date?: string;
   created_at: string;
-  updated_at: string;
   user?: User;
 }
 
 export interface WishlistItemCreate {
   user_id: string;
-  name: string;
-  description: string;
-  estimated_cost: number;
-  priority: string;
+  item: string;
+  vendor?: string;
+  price: number;
+  priority: number; // 1-10
+  status: string; // wished, scheduled, bought
+  notes?: string;
+  planned_date?: string;
 }
 
 export interface WishlistItemUpdate {
   user_id?: string;
-  name?: string;
-  description?: string;
-  estimated_cost?: number;
-  priority?: string;
+  item?: string;
+  vendor?: string;
+  price?: number;
+  priority?: number; // 1-10
+  status?: string; // wished, scheduled, bought
+  notes?: string;
+  planned_date?: string;
 }
 
 export interface Budget {
