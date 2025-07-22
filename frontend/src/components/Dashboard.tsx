@@ -6,7 +6,7 @@ import {
   HeartIcon, 
   ChartBarIcon
 } from '@heroicons/react/24/outline';
-import { BrowserRouter as Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { userApi, categoryApi, expenseApi, wishlistApi, budgetApi } from '../services/api';
 import type { User, Category, Expense, WishlistItem, Budget } from '../types/api';
 
