@@ -141,7 +141,7 @@ export default function Expenses() {
       date_purchased: expense.date_purchased.split('T')[0],
       payment_method: expense.payment_method || '',
       notes: expense.notes || '',
-      selected_categories: [], // TODO: Load existing categories for this expense
+      selected_categories: expense.categories?.map(cat => cat.category_id) || [],
       new_categories: []
     });
     setShowModal(true);
@@ -214,7 +214,9 @@ export default function Expenses() {
   const filteredExpenses = expenses.filter(expense =>
     expense.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
     expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.user?.username.toLowerCase().includes(searchTerm.toLowerCase())
+    expense.user?.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    expense.categories?.some(cat => cat.category_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    false
   );
 
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.price, 0);
@@ -288,6 +290,9 @@ export default function Expenses() {
                   User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Categories
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Payment Method
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -315,6 +320,11 @@ export default function Expenses() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {expense.user?.username || 'Unknown'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {expense.categories?.map(cat => cat.category_name).join(', ') || 'No categories'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

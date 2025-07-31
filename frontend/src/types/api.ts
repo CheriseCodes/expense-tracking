@@ -46,6 +46,7 @@ export interface Expense {
   created_at: string;
   user?: User;
   category?: Category;
+  categories?: Category[];
 }
 
 export interface ExpenseCreate {

@@ -83,6 +83,7 @@ class Expense(ExpenseBase):
     expense_id: UUID
     user_id: UUID
     created_at: datetime
+    categories: Optional[List[Category]] = []
     
     class Config:
         from_attributes = True

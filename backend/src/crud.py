@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from typing import List, Optional
 from models import User, Category, Expense, ExpenseCategory, Wishlist, Budget
@@ -106,7 +106,7 @@ def delete_category(db: Session, category_id: UUID) -> bool:
 
 # Expense CRUD operations
 def get_expense(db: Session, expense_id: UUID) -> Optional[Expense]:
-    return db.query(Expense).filter(Expense.expense_id == expense_id).first()
+    return db.query(Expense).options(joinedload(Expense.categories)).filter(Expense.expense_id == expense_id).first()
 
 def get_expenses(
     db: Session, 
@@ -115,7 +115,7 @@ def get_expenses(
     user_id: Optional[UUID] = None,
     category_id: Optional[UUID] = None
 ) -> List[Expense]:
-    query = db.query(Expense)
+    query = db.query(Expense).options(joinedload(Expense.categories))
     if user_id:
         query = query.filter(Expense.user_id == user_id)
     if category_id:
