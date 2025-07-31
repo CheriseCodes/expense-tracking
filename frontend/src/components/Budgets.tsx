@@ -316,9 +316,9 @@ export default function Budgets() {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Spent:</span>
+                <span className="text-sm text-gray-600">Max Spend:</span>
                 <span className={`text-sm font-medium ${budget.is_over_max ? 'text-red-600' : 'text-gray-900'}`}>
-                  ${budget.current_spend.toFixed(2)}
+                  ${budget.max_spend.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
