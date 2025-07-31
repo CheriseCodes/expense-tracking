@@ -18,7 +18,7 @@ interface BudgetFormData {
   end_date: string;
   timeframe_type: string; // yearly, monthly, weekly, custom
   timeframe_interval: string; // number of years/months/weeks
-  target_date: string; // reference date for recurring budgets
+  recurring_start_date: string; // reference date for recurring budgets
 }
 
 // Currency validation function
@@ -45,7 +45,7 @@ export default function Budgets() {
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     timeframe_type: 'custom',
     timeframe_interval: '',
-    target_date: new Date().toISOString().split('T')[0],
+    recurring_start_date: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
@@ -108,7 +108,7 @@ export default function Budgets() {
           end_date: formData.end_date,
           timeframe_type: formData.timeframe_type,
           timeframe_interval: formData.timeframe_interval ? parseInt(formData.timeframe_interval) : undefined,
-          target_date: formData.target_date
+          recurring_start_date: formData.recurring_start_date
         };
 
       if (editingBudget) {
@@ -137,7 +137,7 @@ export default function Budgets() {
       end_date: budget.end_date.split('T')[0],
       timeframe_type: budget.timeframe_type,
       timeframe_interval: budget.timeframe_interval?.toString() || '',
-      target_date: budget.target_date || new Date().toISOString().split('T')[0]
+      recurring_start_date: budget.recurring_start_date || new Date().toISOString().split('T')[0]
     });
     setShowModal(true);
   };
@@ -164,7 +164,7 @@ export default function Budgets() {
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       timeframe_type: 'custom',
       timeframe_interval: '',
-      target_date: new Date().toISOString().split('T')[0],
+      recurring_start_date: new Date().toISOString().split('T')[0],
     });
   };
 
@@ -453,12 +453,12 @@ export default function Budgets() {
                 {formData.timeframe_type !== 'custom' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Target Date
+                      Recurring Start Date
                     </label>
                     <input
                       type="date"
-                      value={formData.target_date}
-                      onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
+                      value={formData.recurring_start_date}
+                      onChange={(e) => setFormData({ ...formData, recurring_start_date: e.target.value })}
                       className="input-field"
                     />
                     <p className="text-xs text-gray-500 mt-1">

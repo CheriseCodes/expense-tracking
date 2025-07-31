@@ -93,7 +93,7 @@ class Budget(Base):
     # New fields for timeframe system
     timeframe_type = Column(String(20), nullable=False)  # yearly, monthly, weekly, custom
     timeframe_interval = Column(Integer, nullable=True)  # number of years/months/weeks (null for custom)
-    target_date = Column(Date, nullable=True)  # reference date for recurring budgets
+    recurring_start_date = Column(Date, nullable=True)  # reference date for recurring budgets
     
     # Relationships
     user = relationship("User", back_populates="budgets")

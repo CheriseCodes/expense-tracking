@@ -13,31 +13,31 @@ from security import sanitize_input, validate_uuid, validate_numeric_range, log_
 from datetime import date, datetime, timedelta
 import calendar
 
-def calculate_budget_dates(timeframe_type: str, timeframe_interval: Optional[int], target_date: Optional[date] = None) -> tuple[date, date]:
+def calculate_budget_dates(timeframe_type: str, timeframe_interval: Optional[int], recurring_start_date: Optional[date] = None) -> tuple[date, date]:
     """Calculate start and end dates for a budget based on timeframe type and interval"""
     today = date.today()
     
     if timeframe_type == 'custom':
         # For custom, dates are provided directly
-        return target_date, target_date  # This will be overridden by the actual dates
+        return recurring_start_date, recurring_start_date  # This will be overridden by the actual dates
     
-    # For recurring budgets, calculate based on target date
-    if target_date is None:
+    # For recurring budgets, calculate based on recurring start date
+    if recurring_start_date is None:
         # Default to January 1st of current year
-        target_date = date(today.year, 1, 1)
+        recurring_start_date = date(today.year, 1, 1)
     
     if timeframe_type == 'yearly':
-        # Calculate the current year period based on target date
-        years_since_target = (today.year - target_date.year) // timeframe_interval
-        period_start = target_date.replace(year=target_date.year + (years_since_target * timeframe_interval))
+        # Calculate the current year period based on recurring start date
+        years_since_target = (today.year - recurring_start_date.year) // timeframe_interval
+        period_start = recurring_start_date.replace(year=recurring_start_date.year + (years_since_target * timeframe_interval))
         period_end = period_start.replace(year=period_start.year + timeframe_interval) - timedelta(days=1)
         
     elif timeframe_type == 'monthly':
-        # Calculate the current month period based on target date
-        months_since_target = ((today.year - target_date.year) * 12 + (today.month - target_date.month)) // timeframe_interval
-        period_start = target_date.replace(
-            year=target_date.year + ((target_date.month - 1 + (months_since_target * timeframe_interval)) // 12),
-            month=((target_date.month - 1 + (months_since_target * timeframe_interval)) % 12) + 1
+        # Calculate the current month period based on recurring start date
+        months_since_target = ((today.year - recurring_start_date.year) * 12 + (today.month - recurring_start_date.month)) // timeframe_interval
+        period_start = recurring_start_date.replace(
+            year=recurring_start_date.year + ((recurring_start_date.month - 1 + (months_since_target * timeframe_interval)) // 12),
+            month=((recurring_start_date.month - 1 + (months_since_target * timeframe_interval)) % 12) + 1
         )
         
         # Calculate end date
@@ -46,10 +46,10 @@ def calculate_budget_dates(timeframe_type: str, timeframe_interval: Optional[int
         period_end = date(end_year, end_month, 1) - timedelta(days=1)
         
     elif timeframe_type == 'weekly':
-        # Calculate the current week period based on target date
-        days_since_target = (today - target_date).days
+        # Calculate the current week period based on recurring start date
+        days_since_target = (today - recurring_start_date).days
         weeks_since_target = days_since_target // (7 * timeframe_interval)
-        period_start = target_date + timedelta(weeks=weeks_since_target * timeframe_interval)
+        period_start = recurring_start_date + timedelta(weeks=weeks_since_target * timeframe_interval)
         period_end = period_start + timedelta(weeks=timeframe_interval) - timedelta(days=1)
         
     else:
@@ -65,7 +65,7 @@ def get_current_budget_period(budget: Budget) -> tuple[date, date]:
     return calculate_budget_dates(
         budget.timeframe_type, 
         budget.timeframe_interval, 
-        budget.target_date
+        budget.recurring_start_date
     )
 
 # User CRUD operations
@@ -383,7 +383,7 @@ def create_budget(db: Session, budget: BudgetCreate) -> Budget:
         start_date, end_date = calculate_budget_dates(
             budget.timeframe_type, 
             budget.timeframe_interval, 
-            budget.target_date
+            budget.recurring_start_date
         )
     
     # Calculate current spend from existing expenses in this category for this user within the date range

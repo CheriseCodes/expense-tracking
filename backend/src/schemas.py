@@ -146,7 +146,7 @@ class BudgetBase(BaseModel):
     end_date: date
     timeframe_type: str = Field(..., pattern=r'^(yearly|monthly|weekly|custom)$')
     timeframe_interval: Optional[int] = Field(None, ge=1, le=100)
-    target_date: Optional[date] = None
+    recurring_start_date: Optional[date] = None
     
     @validator('end_date')
     def validate_date_range(cls, v, values):
@@ -173,7 +173,7 @@ class BudgetUpdate(BudgetBase):
     end_date: Optional[date] = None
     timeframe_type: Optional[str] = Field(None, pattern=r'^(yearly|monthly|weekly|custom)$')
     timeframe_interval: Optional[int] = Field(None, ge=1, le=100)
-    target_date: Optional[date] = None
+    recurring_start_date: Optional[date] = None
 
 class Budget(BudgetBase):
     budget_id: UUID

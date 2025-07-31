@@ -119,7 +119,7 @@ export interface Budget {
   end_date: string;
   timeframe_type: string; // yearly, monthly, weekly, custom
   timeframe_interval?: number; // number of years/months/weeks
-  target_date?: string; // reference date for recurring budgets
+  recurring_start_date?: string; // reference date for recurring budgets
   user?: User;
   category?: Category;
 }
@@ -133,7 +133,7 @@ export interface BudgetCreate {
   end_date: string;
   timeframe_type: string;
   timeframe_interval?: number;
-  target_date?: string;
+  recurring_start_date?: string;
 }
 
 export interface BudgetUpdate {
@@ -145,7 +145,7 @@ export interface BudgetUpdate {
   end_date?: string;
   timeframe_type?: string;
   timeframe_interval?: number;
-  target_date?: string;
+  recurring_start_date?: string;
 }
 
 export interface ApiResponse<T> {
