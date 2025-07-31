@@ -43,6 +43,13 @@ export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  
+  // Filter states
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [vendorFilter, setVendorFilter] = useState<string>('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
+  
   const [formData, setFormData] = useState<ExpenseFormData>({
     user_id: '',
     item: '',
@@ -211,13 +218,39 @@ export default function Expenses() {
     }));
   };
 
-  const filteredExpenses = expenses.filter(expense =>
-    expense.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.user?.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.categories?.some(cat => cat.category_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    false
-  );
+  // Get unique vendors and payment methods for filter dropdowns
+  const uniqueVendors = [...new Set(expenses.map(expense => expense.vendor).filter(Boolean))].sort();
+  const uniquePaymentMethods = [...new Set(expenses.map(expense => expense.payment_method).filter(Boolean))].sort();
+
+  // Clear all filters
+  const clearFilters = () => {
+    setCategoryFilter('');
+    setVendorFilter('');
+    setPaymentMethodFilter('');
+    setSearchTerm('');
+  };
+
+  const filteredExpenses = expenses.filter(expense => {
+    // Text search filter
+    const searchMatch = 
+      expense.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.user?.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.categories?.some(cat => cat.category_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      false;
+
+    // Category filter
+    const categoryMatch = !categoryFilter || 
+      expense.categories?.some(cat => cat.category_id === categoryFilter);
+
+    // Vendor filter
+    const vendorMatch = !vendorFilter || expense.vendor === vendorFilter;
+
+    // Payment method filter
+    const paymentMethodMatch = !paymentMethodFilter || expense.payment_method === paymentMethodFilter;
+
+    return searchMatch && categoryMatch && vendorMatch && paymentMethodMatch;
+  });
 
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.price, 0);
 
@@ -261,11 +294,38 @@ export default function Expenses() {
           <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search expenses..."
+            placeholder="Search items, vendors, users, or categories..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input-field pl-10"
           />
+        </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center px-3 py-2 text-sm font-medium rounded-md border ${
+              (categoryFilter || vendorFilter || paymentMethodFilter)
+                ? 'text-primary-700 bg-primary-50 border-primary-300 hover:bg-primary-100'
+                : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <FunnelIcon className="h-4 w-4 mr-2" />
+            Filters
+            {(categoryFilter || vendorFilter || paymentMethodFilter) && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-primary-600 text-white rounded-full">
+                {[categoryFilter, vendorFilter, paymentMethodFilter].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+          {(categoryFilter || vendorFilter || paymentMethodFilter) && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center px-3 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-md hover:bg-red-50"
+            >
+              <XMarkIcon className="h-4 w-4 mr-2" />
+              Clear
+            </button>
+          )}
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-gray-900">
@@ -276,6 +336,107 @@ export default function Expenses() {
           </div>
         </div>
       </div>
+
+      {/* Filter Controls */}
+      {showFilters && (
+        <div className="card">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="input-field"
+              >
+                <option value="">All Categories</option>
+                {categories.map((category) => (
+                  <option key={category.category_id} value={category.category_id}>
+                    {category.category_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Vendor
+              </label>
+              <select
+                value={vendorFilter}
+                onChange={(e) => setVendorFilter(e.target.value)}
+                className="input-field"
+              >
+                <option value="">All Vendors</option>
+                {uniqueVendors.map((vendor) => (
+                  <option key={vendor} value={vendor}>
+                    {vendor}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Payment Method
+              </label>
+              <select
+                value={paymentMethodFilter}
+                onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                className="input-field"
+              >
+                <option value="">All Payment Methods</option>
+                {uniquePaymentMethods.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* Active Filter Indicators */}
+          {(categoryFilter || vendorFilter || paymentMethodFilter) && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex flex-wrap gap-2">
+                <span className="text-sm text-gray-600">Active filters:</span>
+                {categoryFilter && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                    Category: {categories.find(c => c.category_id === categoryFilter)?.category_name}
+                    <button
+                      onClick={() => setCategoryFilter('')}
+                      className="ml-1 text-primary-600 hover:text-primary-800"
+                    >
+                      <XMarkIcon className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {vendorFilter && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Vendor: {vendorFilter}
+                    <button
+                      onClick={() => setVendorFilter('')}
+                      className="ml-1 text-blue-600 hover:text-blue-800"
+                    >
+                      <XMarkIcon className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {paymentMethodFilter && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Payment: {paymentMethodFilter}
+                    <button
+                      onClick={() => setPaymentMethodFilter('')}
+                      className="ml-1 text-green-600 hover:text-green-800"
+                    >
+                      <XMarkIcon className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Expenses Table */}
       <div className="card">
