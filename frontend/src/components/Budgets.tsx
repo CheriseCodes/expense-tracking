@@ -453,7 +453,7 @@ export default function Budgets() {
                 {formData.timeframe_type !== 'custom' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Recurring Start Date
+                      Start Date
                     </label>
                     <input
                       type="date"
