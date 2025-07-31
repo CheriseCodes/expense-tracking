@@ -57,8 +57,8 @@ class ExpenseCategory(Base):
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.category_id"), primary_key=True)
     
     # Relationships
-    expense = relationship("Expense", back_populates="expense_categories")
-    category = relationship("Category", back_populates="expense_categories")
+    expense = relationship("Expense", back_populates="expense_categories", overlaps="categories,expenses")
+    category = relationship("Category", back_populates="expense_categories", overlaps="categories,expenses")
 
 class Wishlist(Base):
     __tablename__ = "wishlist"
@@ -89,6 +89,11 @@ class Budget(Base):
     is_over_max = Column(Boolean, nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
+    
+    # New fields for timeframe system
+    timeframe_type = Column(String(20), nullable=False)  # yearly, monthly, weekly, custom
+    timeframe_interval = Column(Integer, nullable=True)  # number of years/months/weeks (null for custom)
+    target_date = Column(Date, nullable=True)  # reference date for recurring budgets
     
     # Relationships
     user = relationship("User", back_populates="budgets")

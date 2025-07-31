@@ -16,6 +16,9 @@ interface BudgetFormData {
   is_over_max: boolean;
   start_date: string;
   end_date: string;
+  timeframe_type: string; // yearly, monthly, weekly, custom
+  timeframe_interval: string; // number of years/months/weeks
+  target_date: string; // reference date for recurring budgets
 }
 
 // Currency validation function
@@ -40,6 +43,9 @@ export default function Budgets() {
     is_over_max: false,
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    timeframe_type: 'custom',
+    timeframe_interval: '',
+    target_date: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
@@ -92,15 +98,18 @@ export default function Budgets() {
     // Calculate if over max
     const isOverMax = false; // This will be calculated based on current and future spend
 
-    try {
-      const budgetData = {
-        user_id: formData.user_id,
-        category_id: formData.category_id,
-        max_spend: maxSpend,
-        is_over_max: isOverMax,
-        start_date: formData.start_date,
-        end_date: formData.end_date
-      };
+          try {
+        const budgetData = {
+          user_id: formData.user_id,
+          category_id: formData.category_id,
+          max_spend: maxSpend,
+          is_over_max: isOverMax,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          timeframe_type: formData.timeframe_type,
+          timeframe_interval: formData.timeframe_interval ? parseInt(formData.timeframe_interval) : undefined,
+          target_date: formData.target_date
+        };
 
       if (editingBudget) {
         await budgetApi.update(editingBudget.budget_id, budgetData);
@@ -126,6 +135,9 @@ export default function Budgets() {
       is_over_max: budget.is_over_max,
       start_date: budget.start_date.split('T')[0],
       end_date: budget.end_date.split('T')[0],
+      timeframe_type: budget.timeframe_type,
+      timeframe_interval: budget.timeframe_interval?.toString() || '',
+      target_date: budget.target_date || new Date().toISOString().split('T')[0]
     });
     setShowModal(true);
   };
@@ -150,6 +162,9 @@ export default function Budgets() {
       is_over_max: false,
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      timeframe_type: 'custom',
+      timeframe_interval: '',
+      target_date: new Date().toISOString().split('T')[0],
     });
   };
 
@@ -318,6 +333,14 @@ export default function Budgets() {
                   {new Date(budget.end_date).toLocaleDateString()}
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Timeframe:</span>
+                <span className="text-sm text-gray-900">
+                  {budget.timeframe_type === 'custom' ? 'Custom' : 
+                   `Every ${budget.timeframe_interval} ${budget.timeframe_type === 'yearly' ? 'year(s)' : 
+                    budget.timeframe_type === 'monthly' ? 'month(s)' : 'week(s)'}`}
+                </span>
+              </div>
             </div>
 
           </div>
@@ -393,28 +416,84 @@ export default function Budgets() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
+                    Timeframe Type
                   </label>
-                  <input
-                    type="date"
+                  <select
                     required
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    value={formData.timeframe_type}
+                    onChange={(e) => setFormData({ ...formData, timeframe_type: e.target.value })}
                     className="input-field"
-                  />
+                  >
+                    <option value="custom">Custom Date Range</option>
+                    <option value="yearly">Yearly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
+                {formData.timeframe_type !== 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Interval
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      required
+                      value={formData.timeframe_interval}
+                      onChange={(e) => setFormData({ ...formData, timeframe_interval: e.target.value })}
+                      className="input-field"
+                      placeholder={`Number of ${formData.timeframe_type === 'yearly' ? 'years' : formData.timeframe_type === 'monthly' ? 'months' : 'weeks'}`}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      e.g., 2 for "every 2 {formData.timeframe_type === 'yearly' ? 'years' : formData.timeframe_type === 'monthly' ? 'months' : 'weeks'}"
+                    </p>
+                  </div>
+                )}
+                {formData.timeframe_type !== 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Target Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.target_date}
+                      onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
+                      className="input-field"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Reference date for calculating budget periods (defaults to January 1st of current year)
+                    </p>
+                  </div>
+                )}
+                {formData.timeframe_type === 'custom' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"

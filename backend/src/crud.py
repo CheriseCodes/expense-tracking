@@ -10,6 +10,63 @@ from schemas import (
 from sqlalchemy import func
 from uuid import UUID
 from security import sanitize_input, validate_uuid, validate_numeric_range, log_security_event
+from datetime import date, datetime, timedelta
+import calendar
+
+def calculate_budget_dates(timeframe_type: str, timeframe_interval: Optional[int], target_date: Optional[date] = None) -> tuple[date, date]:
+    """Calculate start and end dates for a budget based on timeframe type and interval"""
+    today = date.today()
+    
+    if timeframe_type == 'custom':
+        # For custom, dates are provided directly
+        return target_date, target_date  # This will be overridden by the actual dates
+    
+    # For recurring budgets, calculate based on target date
+    if target_date is None:
+        # Default to January 1st of current year
+        target_date = date(today.year, 1, 1)
+    
+    if timeframe_type == 'yearly':
+        # Calculate the current year period based on target date
+        years_since_target = (today.year - target_date.year) // timeframe_interval
+        period_start = target_date.replace(year=target_date.year + (years_since_target * timeframe_interval))
+        period_end = period_start.replace(year=period_start.year + timeframe_interval) - timedelta(days=1)
+        
+    elif timeframe_type == 'monthly':
+        # Calculate the current month period based on target date
+        months_since_target = ((today.year - target_date.year) * 12 + (today.month - target_date.month)) // timeframe_interval
+        period_start = target_date.replace(
+            year=target_date.year + ((target_date.month - 1 + (months_since_target * timeframe_interval)) // 12),
+            month=((target_date.month - 1 + (months_since_target * timeframe_interval)) % 12) + 1
+        )
+        
+        # Calculate end date
+        end_month = ((period_start.month - 1 + timeframe_interval) % 12) + 1
+        end_year = period_start.year + ((period_start.month - 1 + timeframe_interval) // 12)
+        period_end = date(end_year, end_month, 1) - timedelta(days=1)
+        
+    elif timeframe_type == 'weekly':
+        # Calculate the current week period based on target date
+        days_since_target = (today - target_date).days
+        weeks_since_target = days_since_target // (7 * timeframe_interval)
+        period_start = target_date + timedelta(weeks=weeks_since_target * timeframe_interval)
+        period_end = period_start + timedelta(weeks=timeframe_interval) - timedelta(days=1)
+        
+    else:
+        raise ValueError(f"Invalid timeframe type: {timeframe_type}")
+    
+    return period_start, period_end
+
+def get_current_budget_period(budget: Budget) -> tuple[date, date]:
+    """Get the current budget period dates for a recurring budget"""
+    if budget.timeframe_type == 'custom':
+        return budget.start_date, budget.end_date
+    
+    return calculate_budget_dates(
+        budget.timeframe_type, 
+        budget.timeframe_interval, 
+        budget.target_date
+    )
 
 # User CRUD operations
 def get_user(db: Session, user_id: UUID) -> Optional[User]:
@@ -244,10 +301,19 @@ def recalculate_budgets_for_expense(db: Session, user_id: UUID, category_id: UUI
         Budget.category_id == category_id
     ).all()
     
-    # Recalculate current spend for each budget
-    current_spend = get_total_expenses(db, user_id=user_id, category_id=category_id)
-    
     for budget in budgets:
+        # Get current budget period dates
+        current_start, current_end = get_current_budget_period(budget)
+        
+        # Recalculate current spend for the current period
+        current_spend = get_total_expenses_in_date_range(
+            db, 
+            user_id=user_id, 
+            category_id=category_id, 
+            start_date=current_start, 
+            end_date=current_end
+        )
+        
         budget.current_spend = current_spend
         budget.is_over_max = (budget.current_spend + budget.future_spend) > budget.max_spend
     
@@ -309,8 +375,19 @@ def get_budgets(
     return query.offset(skip).limit(limit).all()
 
 def create_budget(db: Session, budget: BudgetCreate) -> Budget:
-    # Calculate current spend from existing expenses in this category for this user
-    current_spend = get_total_expenses(db, user_id=budget.user_id, category_id=budget.category_id)
+    # Calculate dates based on timeframe type
+    if budget.timeframe_type == 'custom':
+        start_date = budget.start_date
+        end_date = budget.end_date
+    else:
+        start_date, end_date = calculate_budget_dates(
+            budget.timeframe_type, 
+            budget.timeframe_interval, 
+            budget.target_date
+        )
+    
+    # Calculate current spend from existing expenses in this category for this user within the date range
+    current_spend = get_total_expenses_in_date_range(db, user_id=budget.user_id, category_id=budget.category_id, start_date=start_date, end_date=end_date)
     
     # For now, set future_spend to 0 (this could be enhanced later)
     future_spend = 0.0
@@ -324,6 +401,8 @@ def create_budget(db: Session, budget: BudgetCreate) -> Budget:
     budget_data['current_spend'] = current_spend
     budget_data['future_spend'] = future_spend
     budget_data['is_over_max'] = is_over_max
+    budget_data['start_date'] = start_date
+    budget_data['end_date'] = end_date
     
     db_budget = Budget(**budget_data)
     db.add(db_budget)
@@ -372,6 +451,20 @@ def get_total_expenses(db: Session, user_id: Optional[UUID] = None, category_id:
         query = query.filter(Expense.user_id == user_id)
     if category_id:
         query = query.join(ExpenseCategory).filter(ExpenseCategory.category_id == category_id)
+    result = query.with_entities(func.sum(Expense.price)).scalar()
+    return result or 0.0
+
+def get_total_expenses_in_date_range(db: Session, user_id: Optional[UUID] = None, category_id: Optional[UUID] = None, start_date: Optional[date] = None, end_date: Optional[date] = None) -> float:
+    """Calculate total expenses within a specific date range"""
+    query = db.query(Expense)
+    if user_id:
+        query = query.filter(Expense.user_id == user_id)
+    if category_id:
+        query = query.join(ExpenseCategory).filter(ExpenseCategory.category_id == category_id)
+    if start_date:
+        query = query.filter(Expense.date_purchased >= start_date)
+    if end_date:
+        query = query.filter(Expense.date_purchased <= end_date)
     result = query.with_entities(func.sum(Expense.price)).scalar()
     return result or 0.0
 
