@@ -45,7 +45,7 @@ export default function Budgets() {
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     timeframe_type: 'custom',
     timeframe_interval: '',
-    recurring_start_date: new Date().toISOString().split('T')[0],
+    recurring_start_date: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // January 1st of current year
   });
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function Budgets() {
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       timeframe_type: 'custom',
       timeframe_interval: '',
-      recurring_start_date: new Date().toISOString().split('T')[0],
+      recurring_start_date: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // January 1st of current year
     });
   };
 
