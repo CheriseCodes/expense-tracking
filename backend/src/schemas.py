@@ -133,23 +133,33 @@ class Wishlist(WishlistBase):
     wish_id: UUID
     user_id: UUID
     created_at: Optional[datetime] = None
+    user: Optional[User] = None
     
     class Config:
         from_attributes = True
 
 # Budget schemas
 class BudgetBase(BaseModel):
-    current_spend: float = Field(..., ge=0, le=999999.99)
-    future_spend: float = Field(..., ge=0, le=999999.99)
     max_spend: float = Field(..., gt=0, le=999999.99)
     is_over_max: bool
     start_date: date
     end_date: date
+    timeframe_type: str = Field(..., pattern=r'^(yearly|monthly|weekly|custom)$')
+    timeframe_interval: Optional[int] = Field(None, ge=1, le=100)
+    recurring_start_date: Optional[date] = None
     
     @validator('end_date')
     def validate_date_range(cls, v, values):
         if 'start_date' in values and v <= values['start_date']:
             raise ValueError('end_date must be after start_date')
+        return v
+    
+    @validator('timeframe_interval')
+    def validate_timeframe_interval(cls, v, values):
+        if 'timeframe_type' in values and values['timeframe_type'] != 'custom' and v is None:
+            raise ValueError('timeframe_interval is required for non-custom timeframes')
+        if 'timeframe_type' in values and values['timeframe_type'] == 'custom' and v is not None:
+            raise ValueError('timeframe_interval should be null for custom timeframes')
         return v
 
 class BudgetCreate(BudgetBase):
@@ -157,17 +167,20 @@ class BudgetCreate(BudgetBase):
     category_id: UUID
 
 class BudgetUpdate(BudgetBase):
-    current_spend: Optional[float] = Field(None, ge=0, le=999999.99)
-    future_spend: Optional[float] = Field(None, ge=0, le=999999.99)
     max_spend: Optional[float] = Field(None, gt=0, le=999999.99)
     is_over_max: Optional[bool] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    timeframe_type: Optional[str] = Field(None, pattern=r'^(yearly|monthly|weekly|custom)$')
+    timeframe_interval: Optional[int] = Field(None, ge=1, le=100)
+    recurring_start_date: Optional[date] = None
 
 class Budget(BudgetBase):
     budget_id: UUID
     user_id: UUID
     category_id: UUID
+    current_spend: float = Field(..., ge=0, le=999999.99)
+    future_spend: float = Field(..., ge=0, le=999999.99)
     
     class Config:
         from_attributes = True 
