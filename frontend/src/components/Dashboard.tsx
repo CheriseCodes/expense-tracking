@@ -6,6 +6,7 @@ import {
   HeartIcon, 
   ChartBarIcon
 } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
 import { userApi, categoryApi, expenseApi, wishlistApi, budgetApi } from '../services/api';
 import type { User, Category, Expense, WishlistItem, Budget } from '../types/api';
 
@@ -132,6 +133,7 @@ export default function Dashboard() {
       icon: UserGroupIcon,
       color: 'bg-blue-500',
       subtitle: 'Registered users',
+      link: '/users',
     },
     {
       title: 'Categories',
@@ -139,6 +141,7 @@ export default function Dashboard() {
       icon: TagIcon,
       color: 'bg-green-500',
       subtitle: 'Expense categories',
+      link: '/categories',
     },
     {
       title: 'Total Expenses',
@@ -146,6 +149,7 @@ export default function Dashboard() {
       icon: CurrencyDollarIcon,
       color: 'bg-yellow-500',
       subtitle: 'Tracked expenses',
+      link: '/expenses',
     },
     {
       title: 'Wishlist Items',
@@ -153,6 +157,7 @@ export default function Dashboard() {
       icon: HeartIcon,
       color: 'bg-pink-500',
       subtitle: 'Planned purchases',
+      link: '/wishlist',
     },
     {
       title: 'Active Budgets',
@@ -160,6 +165,7 @@ export default function Dashboard() {
       icon: ChartBarIcon,
       color: 'bg-purple-500',
       subtitle: `${activeBudgets} active / ${totalBudgets} total`,
+      link: '/budgets',
     },
   ];
 
@@ -173,7 +179,7 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {statCards.map((stat) => (
-          <div key={stat.title} className="card">
+          <Link to={stat.link} key={stat.title} className="card">
             <div className="flex items-center">
               <div className={`p-2 rounded-lg ${stat.color}`}>
                 <stat.icon className="h-6 w-6 text-white" />
@@ -183,8 +189,8 @@ export default function Dashboard() {
               <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
               <p className="text-xs text-gray-500">{stat.subtitle}</p>
             </div>
-          </div>
-          </div>
+            </div>
+          </Link>
         ))}
       </div>
 
@@ -193,38 +199,38 @@ export default function Dashboard() {
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Summary</h3>
           <div className="space-y-4">
-            <div className="flex justify-between">
+          <Link to="/expenses" className="flex justify-between">
               <span className="text-gray-600">Total Expenses:</span>
               <span className="font-semibold text-red-600">
                 ${stats.totalExpenseAmount.toFixed(2)}
               </span>
-            </div>
-            <div className="flex justify-between">
+            </Link>
+            <Link to="/wishlist" className="flex justify-between">
               <span className="text-gray-600">Wishlist Value:</span>
               <span className="font-semibold text-blue-600">
                 ${stats.totalWishlistAmount.toFixed(2)}
               </span>
-            </div>
-            <div className="flex justify-between">
+            </Link>
+            <Link to="/budgets" className="flex justify-between">
               <span className="text-gray-600">Budget Allocation:</span>
               <span className="font-semibold text-green-600">
                 ${stats.totalBudgetAmount.toFixed(2)}
               </span>
-            </div>
-            <div className="flex justify-between">
+            </Link>
+            <Link to="/budgets" className="flex justify-between">
               <span className="text-gray-600">Active Budgets:</span>
               <span className="font-semibold text-blue-600">
                 {activeBudgets} / {totalBudgets}
               </span>
-            </div>
-            <div className="flex justify-between">
+            </Link>
+            <Link to="/budgets" className="flex justify-between">
               <span className="text-gray-600">Over Budget:</span>
               <span className={`font-semibold ${overBudgetCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
                 {overBudgetCount} budgets
               </span>
-            </div>
+            </Link>
             <hr />
-            <div className="flex justify-between">
+            <Link to="/budgets" className="flex justify-between">
               <span className="text-gray-900 font-medium">Remaining Budget:</span>
               <span className={`font-semibold ${
                 stats.totalBudgetAmount - stats.totalExpenseAmount >= 0 
@@ -233,7 +239,7 @@ export default function Dashboard() {
               }`}>
                 ${(stats.totalBudgetAmount - stats.totalExpenseAmount).toFixed(2)}
               </span>
-            </div>
+            </Link>
           </div>
         </div>
 
