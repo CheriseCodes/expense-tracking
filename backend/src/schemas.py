@@ -133,6 +133,7 @@ class Wishlist(WishlistBase):
     wish_id: UUID
     user_id: UUID
     created_at: Optional[datetime] = None
+    user: Optional[User] = None
     
     class Config:
         from_attributes = True

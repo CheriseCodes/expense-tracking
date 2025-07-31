@@ -202,7 +202,7 @@ def remove_expense_category(db: Session, expense_id: UUID, category_id: UUID) ->
 
 # Wishlist CRUD operations
 def get_wishlist_item(db: Session, wish_id: UUID) -> Optional[Wishlist]:
-    return db.query(Wishlist).filter(Wishlist.wish_id == wish_id).first()
+    return db.query(Wishlist).options(joinedload(Wishlist.user)).filter(Wishlist.wish_id == wish_id).first()
 
 def get_wishlist_items(
     db: Session, 
@@ -210,7 +210,7 @@ def get_wishlist_items(
     limit: int = 100,
     user_id: Optional[UUID] = None
 ) -> List[Wishlist]:
-    query = db.query(Wishlist)
+    query = db.query(Wishlist).options(joinedload(Wishlist.user))
     if user_id:
         query = query.filter(Wishlist.user_id == user_id)
     return query.order_by(Wishlist.priority).offset(skip).limit(limit).all()
