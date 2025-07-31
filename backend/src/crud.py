@@ -55,6 +55,26 @@ def get_category(db: Session, category_id: UUID) -> Optional[Category]:
 def get_categories(db: Session, skip: int = 0, limit: int = 100) -> List[Category]:
     return db.query(Category).offset(skip).limit(limit).all()
 
+def get_category_by_name(db: Session, category_name: str) -> Optional[Category]:
+    return db.query(Category).filter(Category.category_name == category_name).first()
+
+def get_or_create_category(db: Session, category_name: str) -> Category:
+    """Get existing category by name or create a new one"""
+    # Sanitize input
+    sanitized_name = sanitize_input(category_name.strip())
+    
+    # Check if category already exists
+    existing_category = get_category_by_name(db, sanitized_name)
+    if existing_category:
+        return existing_category
+    
+    # Create new category
+    db_category = Category(category_name=sanitized_name)
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
 def create_category(db: Session, category: CategoryCreate) -> Category:
     # Sanitize input
     category_data = category.dict()
@@ -116,20 +136,42 @@ def create_expense(db: Session, expense: ExpenseCreate) -> Expense:
     if not validate_numeric_range(expense_data['price']):
         raise ValueError("Price must be between 0 and 999999.99")
     
+    # Extract new categories before creating expense
+    new_categories = expense_data.pop('new_categories', [])
+    
     db_expense = Expense(**expense_data)
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
+    
+    # Create new categories and link them to the expense
+    for category_name in new_categories:
+        if category_name and category_name.strip():
+            category = get_or_create_category(db, category_name.strip())
+            add_expense_category(db, db_expense.expense_id, category.category_id)
+    
     return db_expense
 
 def update_expense(db: Session, expense_id: UUID, expense: ExpenseUpdate) -> Optional[Expense]:
     db_expense = get_expense(db, expense_id)
     if db_expense:
         update_data = expense.dict(exclude_unset=True)
+        
+        # Extract new categories before updating expense
+        new_categories = update_data.pop('new_categories', [])
+        
         for field, value in update_data.items():
             setattr(db_expense, field, value)
+        
         db.commit()
         db.refresh(db_expense)
+        
+        # Create new categories and link them to the expense
+        for category_name in new_categories:
+            if category_name and category_name.strip():
+                category = get_or_create_category(db, category_name.strip())
+                add_expense_category(db, db_expense.expense_id, category.category_id)
+        
     return db_expense
 
 def delete_expense(db: Session, expense_id: UUID) -> bool:

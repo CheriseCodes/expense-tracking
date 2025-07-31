@@ -56,6 +56,7 @@ export interface ExpenseCreate {
   date_purchased: string;
   payment_method?: string;
   notes?: string;
+  new_categories?: string[];
 }
 
 export interface ExpenseUpdate {
@@ -66,6 +67,7 @@ export interface ExpenseUpdate {
   date_purchased?: string;
   payment_method?: string;
   notes?: string;
+  new_categories?: string[];
 }
 
 export interface WishlistItem {

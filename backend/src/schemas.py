@@ -68,6 +68,7 @@ class ExpenseBase(BaseModel):
 
 class ExpenseCreate(ExpenseBase):
     user_id: UUID
+    new_categories: Optional[List[str]] = Field(None, description="List of new category names to create")
 
 class ExpenseUpdate(ExpenseBase):
     item: Optional[str] = Field(None, min_length=1, max_length=255, strip_whitespace=True)
@@ -76,6 +77,7 @@ class ExpenseUpdate(ExpenseBase):
     date_purchased: Optional[date] = None
     payment_method: Optional[str] = Field(None, max_length=100, strip_whitespace=True)
     notes: Optional[str] = Field(None, max_length=1000, strip_whitespace=True)
+    new_categories: Optional[List[str]] = Field(None, description="List of new category names to create")
 
 class Expense(ExpenseBase):
     expense_id: UUID

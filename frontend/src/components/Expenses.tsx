@@ -19,6 +19,7 @@ interface ExpenseFormData {
   payment_method?: string;
   notes?: string;
   selected_categories: string[]; // Array of category IDs
+  new_categories: string[]; // Array of new category names to create
 }
 
 // Currency validation function
@@ -50,7 +51,8 @@ export default function Expenses() {
     date_purchased: new Date().toISOString().split('T')[0],
     payment_method: '',
     notes: '',
-    selected_categories: []
+    selected_categories: [],
+    new_categories: []
   });
 
   useEffect(() => {
@@ -100,7 +102,8 @@ export default function Expenses() {
         price: price,
         date_purchased: formData.date_purchased,
         payment_method: formData.payment_method || undefined,
-        notes: formData.notes || undefined
+        notes: formData.notes || undefined,
+        new_categories: formData.new_categories.filter(cat => cat.trim() !== '')
       };
 
       if (editingExpense) {
@@ -138,7 +141,8 @@ export default function Expenses() {
       date_purchased: expense.date_purchased.split('T')[0],
       payment_method: expense.payment_method || '',
       notes: expense.notes || '',
-      selected_categories: [] // TODO: Load existing categories for this expense
+      selected_categories: [], // TODO: Load existing categories for this expense
+      new_categories: []
     });
     setShowModal(true);
   };
@@ -164,7 +168,8 @@ export default function Expenses() {
       date_purchased: new Date().toISOString().split('T')[0],
       payment_method: '',
       notes: '',
-      selected_categories: []
+      selected_categories: [],
+      new_categories: []
     });
   };
 
@@ -180,6 +185,29 @@ export default function Expenses() {
       selected_categories: prev.selected_categories.includes(categoryId)
         ? prev.selected_categories.filter(id => id !== categoryId)
         : [...prev.selected_categories, categoryId]
+    }));
+  };
+
+  const addNewCategory = () => {
+    setFormData(prev => ({
+      ...prev,
+      new_categories: [...prev.new_categories, '']
+    }));
+  };
+
+  const updateNewCategory = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      new_categories: prev.new_categories.map((cat, i) => 
+        i === index ? value : cat
+      )
+    }));
+  };
+
+  const removeNewCategory = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      new_categories: prev.new_categories.filter((_, i) => i !== index)
     }));
   };
 
@@ -413,29 +441,73 @@ export default function Expenses() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Categories
                   </label>
-                  <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
-                    {categories.length === 0 ? (
-                      <p className="text-sm text-gray-500">No categories available</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {categories.map((category) => (
-                          <label key={category.category_id} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={formData.selected_categories.includes(category.category_id)}
-                              onChange={() => toggleCategory(category.category_id)}
-                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">
-                              {category.category_name}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                  
+                  {/* Existing Categories */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Existing Categories
+                    </label>
+                    <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
+                      {categories.length === 0 ? (
+                        <p className="text-sm text-gray-500">No categories available</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {categories.map((category) => (
+                            <label key={category.category_id} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={formData.selected_categories.includes(category.category_id)}
+                                onChange={() => toggleCategory(category.category_id)}
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              />
+                              <span className="ml-2 text-sm text-gray-700">
+                                {category.category_name}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* New Categories */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-medium text-gray-600">
+                        New Categories
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addNewCategory}
+                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        + Add New
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {formData.new_categories.map((category, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={category}
+                            onChange={(e) => updateNewCategory(index, e.target.value)}
+                            className="flex-1 input-field text-sm"
+                            placeholder="Enter new category name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewCategory(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
                   <p className="text-xs text-gray-500 mt-1">
-                    Select 0 or more categories for this expense
+                    Select existing categories or create new ones for this expense
                   </p>
                 </div>
                 <div>
