@@ -12,8 +12,6 @@ import type { Budget, BudgetCreate, BudgetUpdate, User, Category } from '../type
 interface BudgetFormData {
   user_id: string;
   category_id: string;
-  current_spend: string; // Changed to string for currency validation
-  future_spend: string; // Changed to string for currency validation
   max_spend: string; // Changed to string for currency validation
   is_over_max: boolean;
   start_date: string;
@@ -38,8 +36,6 @@ export default function Budgets() {
   const [formData, setFormData] = useState<BudgetFormData>({
     user_id: '',
     category_id: '',
-    current_spend: '',
-    future_spend: '',
     max_spend: '',
     is_over_max: false,
     start_date: new Date().toISOString().split('T')[0],
@@ -76,8 +72,6 @@ export default function Budgets() {
     
     // Validate all currency fields
     const fieldsToValidate = [
-      { name: 'Current Spend', value: formData.current_spend },
-      { name: 'Future Spend', value: formData.future_spend },
       { name: 'Max Spend', value: formData.max_spend }
     ];
 
@@ -88,19 +82,7 @@ export default function Budgets() {
       }
     }
 
-    const currentSpend = parseFloat(formData.current_spend);
-    const futureSpend = parseFloat(formData.future_spend);
     const maxSpend = parseFloat(formData.max_spend);
-
-    if (isNaN(currentSpend) || currentSpend < 0) {
-      setError('Current spend must be a non-negative number');
-      return;
-    }
-
-    if (isNaN(futureSpend) || futureSpend < 0) {
-      setError('Future spend must be a non-negative number');
-      return;
-    }
 
     if (isNaN(maxSpend) || maxSpend <= 0) {
       setError('Max spend must be a positive number');
@@ -108,14 +90,12 @@ export default function Budgets() {
     }
 
     // Calculate if over max
-    const isOverMax = (currentSpend + futureSpend) > maxSpend;
+    const isOverMax = false; // This will be calculated based on current and future spend
 
     try {
       const budgetData = {
         user_id: formData.user_id,
         category_id: formData.category_id,
-        current_spend: currentSpend,
-        future_spend: futureSpend,
         max_spend: maxSpend,
         is_over_max: isOverMax,
         start_date: formData.start_date,
@@ -142,8 +122,6 @@ export default function Budgets() {
     setFormData({
       user_id: budget.user_id,
       category_id: budget.category_id,
-      current_spend: budget.current_spend.toString(),
-      future_spend: budget.future_spend.toString(),
       max_spend: budget.max_spend.toString(),
       is_over_max: budget.is_over_max,
       start_date: budget.start_date.split('T')[0],
@@ -168,8 +146,6 @@ export default function Budgets() {
     setFormData({
       user_id: '',
       category_id: '',
-      current_spend: '',
-      future_spend: '',
       max_spend: '',
       is_over_max: false,
       start_date: new Date().toISOString().split('T')[0],
@@ -177,7 +153,7 @@ export default function Budgets() {
     });
   };
 
-  const handleCurrencyChange = (field: keyof Pick<BudgetFormData, 'current_spend' | 'future_spend' | 'max_spend'>, value: string) => {
+  const handleCurrencyChange = (field: keyof Pick<BudgetFormData, 'max_spend'>, value: string) => {
     if (validateCurrency(value) || value === '') {
       setFormData({ ...formData, [field]: value });
     }
@@ -400,44 +376,6 @@ export default function Budgets() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Spend
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="text"
-                      required
-                      value={formData.current_spend}
-                      onChange={(e) => handleCurrencyChange('current_spend', e.target.value)}
-                      className="input-field pl-8"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter amount in format: 10.50 (up to 2 decimal places)
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Future Spend
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="text"
-                      required
-                      value={formData.future_spend}
-                      onChange={(e) => handleCurrencyChange('future_spend', e.target.value)}
-                      className="input-field pl-8"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter amount in format: 10.50 (up to 2 decimal places)
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Max Spend
                   </label>
                   <div className="relative">
@@ -453,6 +391,9 @@ export default function Budgets() {
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
                     Enter amount in format: 10.50 (up to 2 decimal places)
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Current spend will be automatically calculated from existing expenses in this category
                   </p>
                 </div>
                 <div>

@@ -124,8 +124,6 @@ export interface Budget {
 export interface BudgetCreate {
   user_id: string;
   category_id: string;
-  current_spend: number;
-  future_spend: number;
   max_spend: number;
   is_over_max: boolean;
   start_date: string;
@@ -135,8 +133,6 @@ export interface BudgetCreate {
 export interface BudgetUpdate {
   user_id?: string;
   category_id?: string;
-  current_spend?: number;
-  future_spend?: number;
   max_spend?: number;
   is_over_max?: boolean;
   start_date?: string;

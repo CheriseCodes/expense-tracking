@@ -140,8 +140,6 @@ class Wishlist(WishlistBase):
 
 # Budget schemas
 class BudgetBase(BaseModel):
-    current_spend: float = Field(..., ge=0, le=999999.99)
-    future_spend: float = Field(..., ge=0, le=999999.99)
     max_spend: float = Field(..., gt=0, le=999999.99)
     is_over_max: bool
     start_date: date
@@ -158,8 +156,6 @@ class BudgetCreate(BudgetBase):
     category_id: UUID
 
 class BudgetUpdate(BudgetBase):
-    current_spend: Optional[float] = Field(None, ge=0, le=999999.99)
-    future_spend: Optional[float] = Field(None, ge=0, le=999999.99)
     max_spend: Optional[float] = Field(None, gt=0, le=999999.99)
     is_over_max: Optional[bool] = None
     start_date: Optional[date] = None
@@ -169,6 +165,8 @@ class Budget(BudgetBase):
     budget_id: UUID
     user_id: UUID
     category_id: UUID
+    current_spend: float = Field(..., ge=0, le=999999.99)
+    future_spend: float = Field(..., ge=0, le=999999.99)
     
     class Config:
         from_attributes = True 

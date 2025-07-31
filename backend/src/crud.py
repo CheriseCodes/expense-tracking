@@ -149,6 +149,8 @@ def create_expense(db: Session, expense: ExpenseCreate) -> Expense:
         if category_name and category_name.strip():
             category = get_or_create_category(db, category_name.strip())
             add_expense_category(db, db_expense.expense_id, category.category_id)
+            # Recalculate budgets for this category
+            recalculate_budgets_for_expense(db, db_expense.user_id, category.category_id)
     
     return db_expense
 
@@ -160,25 +162,43 @@ def update_expense(db: Session, expense_id: UUID, expense: ExpenseUpdate) -> Opt
         # Extract new categories before updating expense
         new_categories = update_data.pop('new_categories', [])
         
+        # Get existing categories before updating
+        existing_categories = [ec.category_id for ec in db_expense.expense_categories]
+        
         for field, value in update_data.items():
             setattr(db_expense, field, value)
         
         db.commit()
         db.refresh(db_expense)
         
+        # Recalculate budgets for existing categories (in case amount changed)
+        for category_id in existing_categories:
+            recalculate_budgets_for_expense(db, db_expense.user_id, category_id)
+        
         # Create new categories and link them to the expense
         for category_name in new_categories:
             if category_name and category_name.strip():
                 category = get_or_create_category(db, category_name.strip())
                 add_expense_category(db, db_expense.expense_id, category.category_id)
+                # Recalculate budgets for this category
+                recalculate_budgets_for_expense(db, db_expense.user_id, category.category_id)
         
     return db_expense
 
 def delete_expense(db: Session, expense_id: UUID) -> bool:
     db_expense = get_expense(db, expense_id)
     if db_expense:
+        # Get categories before deleting the expense
+        categories_to_recalculate = [ec.category_id for ec in db_expense.expense_categories]
+        user_id = db_expense.user_id
+        
         db.delete(db_expense)
         db.commit()
+        
+        # Recalculate budgets for all categories that were associated with this expense
+        for category_id in categories_to_recalculate:
+            recalculate_budgets_for_expense(db, user_id, category_id)
+        
         return True
     return False
 
@@ -187,6 +207,13 @@ def add_expense_category(db: Session, expense_id: UUID, category_id: UUID) -> Ex
     db_expense_category = ExpenseCategory(expense_id=expense_id, category_id=category_id)
     db.add(db_expense_category)
     db.commit()
+    
+    # Get the expense to find the user_id
+    expense = get_expense(db, expense_id)
+    if expense:
+        # Recalculate budgets for this category
+        recalculate_budgets_for_expense(db, expense.user_id, category_id)
+    
     return db_expense_category
 
 def remove_expense_category(db: Session, expense_id: UUID, category_id: UUID) -> bool:
@@ -195,10 +222,36 @@ def remove_expense_category(db: Session, expense_id: UUID, category_id: UUID) ->
         ExpenseCategory.category_id == category_id
     ).first()
     if db_expense_category:
+        # Get the expense to find the user_id before deleting the relationship
+        expense = get_expense(db, expense_id)
+        user_id = expense.user_id if expense else None
+        
         db.delete(db_expense_category)
         db.commit()
+        
+        # Recalculate budgets for this category
+        if user_id:
+            recalculate_budgets_for_expense(db, user_id, category_id)
+        
         return True
     return False
+
+def recalculate_budgets_for_expense(db: Session, user_id: UUID, category_id: UUID) -> None:
+    """Recalculate budgets when an expense is created or updated"""
+    # Find all budgets for this user and category
+    budgets = db.query(Budget).filter(
+        Budget.user_id == user_id,
+        Budget.category_id == category_id
+    ).all()
+    
+    # Recalculate current spend for each budget
+    current_spend = get_total_expenses(db, user_id=user_id, category_id=category_id)
+    
+    for budget in budgets:
+        budget.current_spend = current_spend
+        budget.is_over_max = (budget.current_spend + budget.future_spend) > budget.max_spend
+    
+    db.commit()
 
 # Wishlist CRUD operations
 def get_wishlist_item(db: Session, wish_id: UUID) -> Optional[Wishlist]:
@@ -256,7 +309,23 @@ def get_budgets(
     return query.offset(skip).limit(limit).all()
 
 def create_budget(db: Session, budget: BudgetCreate) -> Budget:
-    db_budget = Budget(**budget.dict())
+    # Calculate current spend from existing expenses in this category for this user
+    current_spend = get_total_expenses(db, user_id=budget.user_id, category_id=budget.category_id)
+    
+    # For now, set future_spend to 0 (this could be enhanced later)
+    future_spend = 0.0
+    
+    # Calculate if over max
+    total_spend = current_spend + future_spend
+    is_over_max = total_spend > budget.max_spend
+    
+    # Create budget with calculated values
+    budget_data = budget.dict()
+    budget_data['current_spend'] = current_spend
+    budget_data['future_spend'] = future_spend
+    budget_data['is_over_max'] = is_over_max
+    
+    db_budget = Budget(**budget_data)
     db.add(db_budget)
     db.commit()
     db.refresh(db_budget)
@@ -266,8 +335,24 @@ def update_budget(db: Session, budget_id: UUID, budget: BudgetUpdate) -> Optiona
     db_budget = get_budget(db, budget_id)
     if db_budget:
         update_data = budget.dict(exclude_unset=True)
+        
+        # Recalculate current spend if category or user changed
+        if 'category_id' in update_data or 'user_id' in update_data:
+            user_id = update_data.get('user_id', db_budget.user_id)
+            category_id = update_data.get('category_id', db_budget.category_id)
+            current_spend = get_total_expenses(db, user_id=user_id, category_id=category_id)
+            update_data['current_spend'] = current_spend
+        
+        # Recalculate is_over_max if max_spend changed
+        if 'max_spend' in update_data:
+            current_spend = update_data.get('current_spend', db_budget.current_spend)
+            future_spend = update_data.get('future_spend', db_budget.future_spend)
+            total_spend = current_spend + future_spend
+            update_data['is_over_max'] = total_spend > update_data['max_spend']
+        
         for field, value in update_data.items():
             setattr(db_budget, field, value)
+        
         db.commit()
         db.refresh(db_budget)
     return db_budget
