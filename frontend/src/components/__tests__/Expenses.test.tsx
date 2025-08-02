@@ -113,7 +113,7 @@ describe('Expenses', () => {
 			render(<Expenses />)
 			
 			// Check that the loading state is rendered (no expenses table visible)
-			expect(screen.queryByText('Expenses')).not.toBeInTheDocument()
+			expect(screen.getByTestId('expenses-loading-state')).toBeInTheDocument()
 		})
 
 		it('displays expenses when data loads successfully', async () => {

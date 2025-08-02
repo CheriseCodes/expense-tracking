@@ -51,7 +51,7 @@ describe('Categories', () => {
 			render(<Categories />)
 			
 			// Check that the loading state is rendered (no categories visible)
-			expect(screen.queryByText('Categories')).not.toBeInTheDocument()
+			expect(screen.getByTestId('categories-loading-state')).toBeInTheDocument()
 		})
 
 		it('displays categories when data loads successfully', async () => {

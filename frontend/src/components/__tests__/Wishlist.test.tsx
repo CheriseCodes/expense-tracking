@@ -32,7 +32,7 @@ describe('Wishlist', () => {
 		it('renders loading state initially', () => {
 			render(<Wishlist />)
 			
-			expect(screen.getByTestId('loading-state')).toBeInTheDocument()
+			expect(screen.getByTestId('wishlist-loading-state')).toBeInTheDocument()
 		})
 
 		it('displays wishlist items when data loads successfully', async () => {
