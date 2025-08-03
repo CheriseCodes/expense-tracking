@@ -117,6 +117,9 @@ export interface Budget {
   is_over_max: boolean;
   start_date: string;
   end_date: string;
+  timeframe_type: string; // yearly, monthly, weekly, custom
+  timeframe_interval?: number; // number of years/months/weeks
+  recurring_start_date?: string; // reference date for recurring budgets
   user?: User;
   category?: Category;
 }
@@ -124,23 +127,25 @@ export interface Budget {
 export interface BudgetCreate {
   user_id: string;
   category_id: string;
-  current_spend: number;
-  future_spend: number;
   max_spend: number;
   is_over_max: boolean;
   start_date: string;
   end_date: string;
+  timeframe_type: string;
+  timeframe_interval?: number;
+  recurring_start_date?: string;
 }
 
 export interface BudgetUpdate {
   user_id?: string;
   category_id?: string;
-  current_spend?: number;
-  future_spend?: number;
   max_spend?: number;
   is_over_max?: boolean;
   start_date?: string;
   end_date?: string;
+  timeframe_type?: string;
+  timeframe_interval?: number;
+  recurring_start_date?: string;
 }
 
 export interface ApiResponse<T> {

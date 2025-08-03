@@ -12,12 +12,13 @@ import type { Budget, BudgetCreate, BudgetUpdate, User, Category } from '../type
 interface BudgetFormData {
   user_id: string;
   category_id: string;
-  current_spend: string; // Changed to string for currency validation
-  future_spend: string; // Changed to string for currency validation
   max_spend: string; // Changed to string for currency validation
   is_over_max: boolean;
   start_date: string;
   end_date: string;
+  timeframe_type: string; // yearly, monthly, weekly, custom
+  timeframe_interval: string; // number of years/months/weeks
+  recurring_start_date: string; // reference date for recurring budgets
 }
 
 // Currency validation function
@@ -38,12 +39,13 @@ export default function Budgets() {
   const [formData, setFormData] = useState<BudgetFormData>({
     user_id: '',
     category_id: '',
-    current_spend: '',
-    future_spend: '',
     max_spend: '',
     is_over_max: false,
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    timeframe_type: 'custom',
+    timeframe_interval: '',
+    recurring_start_date: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // January 1st of current year
   });
 
   useEffect(() => {
@@ -76,8 +78,6 @@ export default function Budgets() {
     
     // Validate all currency fields
     const fieldsToValidate = [
-      { name: 'Current Spend', value: formData.current_spend },
-      { name: 'Future Spend', value: formData.future_spend },
       { name: 'Max Spend', value: formData.max_spend }
     ];
 
@@ -88,19 +88,7 @@ export default function Budgets() {
       }
     }
 
-    const currentSpend = parseFloat(formData.current_spend);
-    const futureSpend = parseFloat(formData.future_spend);
     const maxSpend = parseFloat(formData.max_spend);
-
-    if (isNaN(currentSpend) || currentSpend < 0) {
-      setError('Current spend must be a non-negative number');
-      return;
-    }
-
-    if (isNaN(futureSpend) || futureSpend < 0) {
-      setError('Future spend must be a non-negative number');
-      return;
-    }
 
     if (isNaN(maxSpend) || maxSpend <= 0) {
       setError('Max spend must be a positive number');
@@ -108,19 +96,20 @@ export default function Budgets() {
     }
 
     // Calculate if over max
-    const isOverMax = (currentSpend + futureSpend) > maxSpend;
+    const isOverMax = false; // This will be calculated based on current and future spend
 
-    try {
-      const budgetData = {
-        user_id: formData.user_id,
-        category_id: formData.category_id,
-        current_spend: currentSpend,
-        future_spend: futureSpend,
-        max_spend: maxSpend,
-        is_over_max: isOverMax,
-        start_date: formData.start_date,
-        end_date: formData.end_date
-      };
+          try {
+        const budgetData = {
+          user_id: formData.user_id,
+          category_id: formData.category_id,
+          max_spend: maxSpend,
+          is_over_max: isOverMax,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          timeframe_type: formData.timeframe_type,
+          timeframe_interval: formData.timeframe_interval ? parseInt(formData.timeframe_interval) : undefined,
+          recurring_start_date: formData.recurring_start_date
+        };
 
       if (editingBudget) {
         await budgetApi.update(editingBudget.budget_id, budgetData);
@@ -142,12 +131,13 @@ export default function Budgets() {
     setFormData({
       user_id: budget.user_id,
       category_id: budget.category_id,
-      current_spend: budget.current_spend.toString(),
-      future_spend: budget.future_spend.toString(),
       max_spend: budget.max_spend.toString(),
       is_over_max: budget.is_over_max,
       start_date: budget.start_date.split('T')[0],
       end_date: budget.end_date.split('T')[0],
+      timeframe_type: budget.timeframe_type,
+      timeframe_interval: budget.timeframe_interval?.toString() || '',
+      recurring_start_date: budget.recurring_start_date || new Date().toISOString().split('T')[0]
     });
     setShowModal(true);
   };
@@ -168,16 +158,17 @@ export default function Budgets() {
     setFormData({
       user_id: '',
       category_id: '',
-      current_spend: '',
-      future_spend: '',
       max_spend: '',
       is_over_max: false,
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      timeframe_type: 'custom',
+      timeframe_interval: '',
+      recurring_start_date: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // January 1st of current year
     });
   };
 
-  const handleCurrencyChange = (field: keyof Pick<BudgetFormData, 'current_spend' | 'future_spend' | 'max_spend'>, value: string) => {
+  const handleCurrencyChange = (field: keyof Pick<BudgetFormData, 'max_spend'>, value: string) => {
     if (validateCurrency(value) || value === '') {
       setFormData({ ...formData, [field]: value });
     }
@@ -208,7 +199,7 @@ export default function Budgets() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div data-testid="budgets-loading-state" className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     );
@@ -323,16 +314,11 @@ export default function Budgets() {
                   ${budget.current_spend.toFixed(2)}
                 </span>
               </div>
+
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Future Spend:</span>
-                <span className="text-sm text-gray-900">
-                  ${budget.future_spend.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Spent:</span>
+                <span className="text-sm text-gray-600">Max Spend:</span>
                 <span className={`text-sm font-medium ${budget.is_over_max ? 'text-red-600' : 'text-gray-900'}`}>
-                  ${(budget.current_spend + budget.future_spend).toFixed(2)}
+                  ${budget.max_spend.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -345,6 +331,14 @@ export default function Budgets() {
                 <span className="text-sm text-gray-600">End Date:</span>
                 <span className="text-sm text-gray-900">
                   {new Date(budget.end_date).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Timeframe:</span>
+                <span className="text-sm text-gray-900">
+                  {budget.timeframe_type === 'custom' ? 'Custom' : 
+                   `Every ${budget.timeframe_interval} ${budget.timeframe_type === 'yearly' ? 'year(s)' : 
+                    budget.timeframe_type === 'monthly' ? 'month(s)' : 'week(s)'}`}
                 </span>
               </div>
             </div>
@@ -400,44 +394,6 @@ export default function Budgets() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Spend
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="text"
-                      required
-                      value={formData.current_spend}
-                      onChange={(e) => handleCurrencyChange('current_spend', e.target.value)}
-                      className="input-field pl-8"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter amount in format: 10.50 (up to 2 decimal places)
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Future Spend
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="text"
-                      required
-                      value={formData.future_spend}
-                      onChange={(e) => handleCurrencyChange('future_spend', e.target.value)}
-                      className="input-field pl-8"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter amount in format: 10.50 (up to 2 decimal places)
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Max Spend
                   </label>
                   <div className="relative">
@@ -454,31 +410,90 @@ export default function Budgets() {
                   <p className="text-xs text-gray-500 mt-1">
                     Enter amount in format: 10.50 (up to 2 decimal places)
                   </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Current spend will be automatically calculated from existing expenses in this category
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
+                    Timeframe Type
                   </label>
-                  <input
-                    type="date"
+                  <select
                     required
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    value={formData.timeframe_type}
+                    onChange={(e) => setFormData({ ...formData, timeframe_type: e.target.value })}
                     className="input-field"
-                  />
+                  >
+                    <option value="custom">Custom Date Range</option>
+                    <option value="yearly">Yearly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
+                {formData.timeframe_type !== 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Interval
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      required
+                      value={formData.timeframe_interval}
+                      onChange={(e) => setFormData({ ...formData, timeframe_interval: e.target.value })}
+                      className="input-field"
+                      placeholder={`Number of ${formData.timeframe_type === 'yearly' ? 'years' : formData.timeframe_type === 'monthly' ? 'months' : 'weeks'}`}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      e.g., 2 for "every 2 {formData.timeframe_type === 'yearly' ? 'years' : formData.timeframe_type === 'monthly' ? 'months' : 'weeks'}"
+                    </p>
+                  </div>
+                )}
+                {formData.timeframe_type !== 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.recurring_start_date}
+                      onChange={(e) => setFormData({ ...formData, recurring_start_date: e.target.value })}
+                      className="input-field"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Reference date for calculating budget periods (defaults to January 1st of current year)
+                    </p>
+                  </div>
+                )}
+                {formData.timeframe_type === 'custom' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
