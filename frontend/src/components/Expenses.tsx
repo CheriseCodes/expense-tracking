@@ -256,74 +256,115 @@ export default function Expenses() {
         return { data, errors };
       }
   
-      const header = lines[0].split('\t');
-      const expectedHeaders = ['Item', 'Vendor', 'Price', 'Date', 'Method', 'Notes'];
+      const header = lines[0].split('\t').map(h => h.trim());
       
-      if (header.length !== expectedHeaders.length) {
-        errors.push(`Expected ${expectedHeaders.length} columns, found ${header.length}`);
-        return { data, errors };
-      }
-  
-      for (let i = 0; i < expectedHeaders.length; i++) {
-        if (header[i].trim() !== expectedHeaders[i]) {
-          errors.push(`Column ${i + 1} should be "${expectedHeaders[i]}", found "${header[i]}"`);
+      // Define header mappings (case-insensitive)
+      const headerMappings: { [key: string]: string } = {
+        'item': 'item',
+        'vendor': 'vendor', 
+        'price': 'price',
+        'date': 'date',
+        'method': 'method',
+        'payment_method': 'method',
+        'payment method': 'method',
+        'notes': 'notes',
+        'note': 'notes'
+      };
+      
+      // Map headers to their corresponding field names
+      const headerMap: { [key: string]: number } = {};
+      const foundFields: { [key: string]: boolean } = {};
+      
+      for (let i = 0; i < header.length; i++) {
+        const headerName = header[i].toLowerCase();
+        const mappedField = headerMappings[headerName];
+        
+        if (mappedField) {
+          headerMap[mappedField] = i;
+          foundFields[mappedField] = true;
         }
       }
-  
-      if (errors.length > 0) return { data, errors };
+      
+      // Check if at least one recognized field is present
+      const recognizedFields = Object.keys(foundFields);
+      if (recognizedFields.length === 0) {
+        errors.push(`No recognized columns found. Available columns: ${header.join(', ')}. Supported columns: Item, Vendor, Price, Date, Method, Notes`);
+        return { data, errors };
+      }
   
       // Parse data rows
       for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split('\t');
         
         // Handle rows with missing columns by padding with empty strings
-        while (row.length < expectedHeaders.length) {
+        while (row.length < header.length) {
           row.push('');
         }
         
-        const [item, vendor, priceStr, dayStr, method, notes] = row;
+        // Extract values using header mapping
+        const item = headerMap['item'] !== undefined ? row[headerMap['item']] : '';
+        const vendor = headerMap['vendor'] !== undefined ? row[headerMap['vendor']] : '';
+        const priceStr = headerMap['price'] !== undefined ? row[headerMap['price']] : '';
+        const dayStr = headerMap['date'] !== undefined ? row[headerMap['date']] : '';
+        const method = headerMap['method'] !== undefined ? row[headerMap['method']] : '';
+        const notes = headerMap['notes'] !== undefined ? row[headerMap['notes']] : '';
         
-        // Validate required fields
-        if (!item.trim()) {
-          errors.push(`Row ${i + 1}: Item is required`);
-          continue;
+        // Validate fields only if they are present
+        let hasErrors = false;
+        
+        // Validate item if present
+        if (headerMap['item'] !== undefined && !item.trim()) {
+          errors.push(`Row ${i + 1}: Item cannot be empty`);
+          hasErrors = true;
         }
-        if (!vendor.trim()) {
-          errors.push(`Row ${i + 1}: Vendor is required`);
-          continue;
+        
+        // Validate vendor if present
+        if (headerMap['vendor'] !== undefined && !vendor.trim()) {
+          errors.push(`Row ${i + 1}: Vendor cannot be empty`);
+          hasErrors = true;
         }
-        if (!priceStr.trim()) {
-          errors.push(`Row ${i + 1}: Price is required`);
-          continue;
+        
+        // Validate price if present
+        let price = 0;
+        if (headerMap['price'] !== undefined) {
+          if (!priceStr.trim()) {
+            errors.push(`Row ${i + 1}: Price cannot be empty`);
+            hasErrors = true;
+          } else {
+            price = parseFloat(priceStr);
+            if (isNaN(price)) {
+              errors.push(`Row ${i + 1}: Invalid price "${priceStr}"`);
+              hasErrors = true;
+            }
+          }
         }
-        if (!dayStr.trim()) {
-          errors.push(`Row ${i + 1}: Date is required`);
-          continue;
+        
+        // Validate date if present
+        let dateStr = new Date().toISOString().split('T')[0]; // Default to today
+        if (headerMap['date'] !== undefined) {
+          if (!dayStr.trim()) {
+            errors.push(`Row ${i + 1}: Date cannot be empty`);
+            hasErrors = true;
+          } else {
+            const day = parseInt(dayStr);
+            if (isNaN(day) || day < 1 || day > 31) {
+              errors.push(`Row ${i + 1}: Invalid day "${dayStr}"`);
+              hasErrors = true;
+            } else {
+              const monthNum = parseInt(month);
+              const yearNum = parseInt(year);
+              const date = new Date(yearNum, monthNum, day);
+              dateStr = date.toISOString().split('T')[0];
+            }
+          }
         }
-  
-        // Parse price
-        const price = parseFloat(priceStr);
-        if (isNaN(price)) {
-          errors.push(`Row ${i + 1}: Invalid price "${priceStr}"`);
-          continue;
-        }
-  
-        // Parse date
-        const day = parseInt(dayStr);
-        if (isNaN(day) || day < 1 || day > 31) {
-          errors.push(`Row ${i + 1}: Invalid day "${dayStr}"`);
-          continue;
-        }
-  
-        const monthNum = parseInt(month);
-        const yearNum = parseInt(year);
-        const date = new Date(yearNum, monthNum, day);
-        const dateStr = date.toISOString().split('T')[0];
+        
+        if (hasErrors) continue;
   
         data.push({
-          item: item.trim(),
-          vendor: vendor.trim(),
-          price,
+          item: item.trim() || 'Unknown Item',
+          vendor: vendor.trim() || 'Unknown Vendor',
+          price: price || 0,
           date_purchased: dateStr,
           payment_method: method ? method.trim() : '',
           notes: notes ? notes.trim() : ''
@@ -999,15 +1040,22 @@ export default function Expenses() {
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h4 className="text-sm font-medium text-blue-900 mb-2">CSV Format Requirements:</h4>
                 <p className="text-sm text-blue-800 mb-2">
-                  Your CSV file should have the following columns (tab-separated):
+                  Your CSV file should have at least one of these columns (tab-separated, any order):
                 </p>
+                <div className="text-sm text-blue-800 font-mono bg-blue-100 p-2 rounded mb-2">
+                  <strong>Supported columns:</strong> Item, Vendor, Price, Date, Method (or Payment Method), Notes (or Note)
+                </div>
                 <div className="text-sm text-blue-800 font-mono bg-blue-100 p-2 rounded">
-                  Item	Vendor	Price	Date	Method	Notes
+                  Examples:<br/>
+                  • Full: Item	Vendor	Price	Date	Method	Notes<br/>
+                  • Minimal: Item<br/>
+                  • Custom: Price	Vendor	Item
                 </div>
                 <p className="text-sm text-blue-800 mt-2">
-                  • Date should be the day of the month (1-31)<br/>
-                  • Month and Year will be set below<br/>
-                  • Missing columns will be set to empty strings
+                  • <strong>Only 1 column required</strong> - any recognized column will work<br/>
+                  • <strong>Date</strong> should be the day of the month (1-31) if present<br/>
+                  • <strong>Month and Year</strong> will be set below<br/>
+                  • <strong>Missing fields</strong> will use defaults (Unknown Item/Vendor, $0.00, today's date)
                 </p>
               </div>
 
