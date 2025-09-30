@@ -31,6 +31,7 @@ interface CSVRow {
   date_purchased: string;
   payment_method: string;
   notes: string;
+  categories: string;
 }
 
 interface CSVImportData {
@@ -268,7 +269,10 @@ export default function Expenses() {
         'payment_method': 'method',
         'payment method': 'method',
         'notes': 'notes',
-        'note': 'notes'
+        'note': 'notes',
+        'categories': 'categories',
+        'category': 'categories',
+        'cat': 'categories'
       };
       
       // Map headers to their corresponding field names
@@ -308,6 +312,7 @@ export default function Expenses() {
         const dayStr = headerMap['date'] !== undefined ? row[headerMap['date']] : '';
         const method = headerMap['method'] !== undefined ? row[headerMap['method']] : '';
         const notes = headerMap['notes'] !== undefined ? row[headerMap['notes']] : '';
+        const categories = headerMap['categories'] !== undefined ? row[headerMap['categories']] : '';
         
         // Validate fields only if they are present
         let hasErrors = false;
@@ -367,7 +372,8 @@ export default function Expenses() {
           price: price || 0,
           date_purchased: dateStr,
           payment_method: method ? method.trim() : '',
-          notes: notes ? notes.trim() : ''
+          notes: notes ? notes.trim() : '',
+          categories: categories ? categories.trim() : ''
         });
       }
   
@@ -435,6 +441,13 @@ export default function Expenses() {
           const row = csvImportData.parsedData[i];
           
           try {
+            // Parse categories from CSV if present
+            const newCategories: string[] = [];
+            if (row.categories && row.categories.trim()) {
+              // Split by comma and clean up each category name
+              newCategories.push(...row.categories.split(',').map(cat => cat.trim()).filter(cat => cat.length > 0));
+            }
+
             const expenseData: ExpenseCreate = {
               user_id: selectedUser.user_id,
               item: row.item,
@@ -442,7 +455,8 @@ export default function Expenses() {
               price: row.price,
               date_purchased: row.date_purchased,
               payment_method: row.payment_method || undefined,
-              notes: row.notes || undefined
+              notes: row.notes || undefined,
+              new_categories: newCategories
             };
   
             await expenseApi.create(expenseData);
@@ -1043,18 +1057,19 @@ export default function Expenses() {
                   Your CSV file should have at least one of these columns (tab-separated, any order):
                 </p>
                 <div className="text-sm text-blue-800 font-mono bg-blue-100 p-2 rounded mb-2">
-                  <strong>Supported columns:</strong> Item, Vendor, Price, Date, Method (or Payment Method), Notes (or Note)
+                  <strong>Supported columns:</strong> Item, Vendor, Price, Date, Method (or Payment Method), Notes (or Note), Categories (or Category)
                 </div>
                 <div className="text-sm text-blue-800 font-mono bg-blue-100 p-2 rounded">
                   Examples:<br/>
-                  • Full: Item	Vendor	Price	Date	Method	Notes<br/>
+                  • Full: Item	Vendor	Price	Date	Method	Notes	Categories<br/>
                   • Minimal: Item<br/>
-                  • Custom: Price	Vendor	Item
+                  • Custom: Price	Vendor	Item	Categories
                 </div>
                 <p className="text-sm text-blue-800 mt-2">
                   • <strong>Only 1 column required</strong> - any recognized column will work<br/>
                   • <strong>Date</strong> should be the day of the month (1-31) if present<br/>
                   • <strong>Month and Year</strong> will be set below<br/>
+                  • <strong>Categories</strong> can be comma-separated (e.g., "Food, Groceries")<br/>
                   • <strong>Missing fields</strong> will use defaults (Unknown Item/Vendor, $0.00, today's date)
                 </p>
               </div>
