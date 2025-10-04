@@ -88,6 +88,10 @@ export default function Expenses() {
   });
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  
+  // Bulk selection state
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
 
   useEffect(() => {
@@ -106,6 +110,8 @@ export default function Expenses() {
       setExpenses(Array.isArray(expensesResponse) ? expensesResponse : []);
       setUsers(Array.isArray(usersResponse) ? usersResponse : []);
       setCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
+      // Clear selection when data is refreshed
+      clearSelection();
     } catch (err) {
       setError('Failed to load data');
       console.error('Expenses error:', err);
@@ -244,6 +250,82 @@ export default function Expenses() {
       ...prev,
       new_categories: prev.new_categories.filter((_, i) => i !== index)
     }));
+  };
+
+  // Bulk selection functions
+  const toggleExpenseSelection = (expenseId: string) => {
+    setSelectedExpenses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(expenseId)) {
+        newSet.delete(expenseId);
+      } else {
+        newSet.add(expenseId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedExpenses.size === filteredExpenses.length) {
+      setSelectedExpenses(new Set());
+    } else {
+      setSelectedExpenses(new Set(filteredExpenses.map(expense => expense.expense_id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedExpenses(new Set());
+  };
+
+  // Bulk delete function
+  const handleBulkDelete = async () => {
+    if (selectedExpenses.size === 0) return;
+    
+    const confirmMessage = `Are you sure you want to delete ${selectedExpenses.size} expense${selectedExpenses.size > 1 ? 's' : ''}?`;
+    if (!confirm(confirmMessage)) return;
+    
+    setIsDeleting(true);
+    setError(null);
+    
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+      
+      // Delete expenses one by one
+      for (const expenseId of selectedExpenses) {
+        try {
+          await expenseApi.delete(expenseId);
+          successCount++;
+          
+          // Add a small delay between requests
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          errorCount++;
+          const expense = expenses.find(e => e.expense_id === expenseId);
+          const errorMessage = `${expense?.item || 'Unknown expense'}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMessage);
+          console.error(`Failed to delete expense ${expenseId}:`, error);
+        }
+      }
+      
+      // Refresh data and clear selection
+      await fetchData();
+      clearSelection();
+      
+      // Show results
+      if (errorCount > 0) {
+        setError(`Bulk delete completed with errors: ${successCount} successful, ${errorCount} failed. Errors: ${errors.join('; ')}`);
+      } else {
+        setError(null);
+      }
+      
+    } catch (error) {
+      setError('Failed to delete expenses: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('Bulk delete error:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
     // CSV parsing function
@@ -532,6 +614,7 @@ export default function Expenses() {
     setVendorFilter('');
     setPaymentMethodFilter('');
     setSearchTerm('');
+    clearSelection(); // Clear selection when filters change
   };
 
   const filteredExpenses = expenses.filter(expense => {
@@ -752,12 +835,63 @@ export default function Expenses() {
         </div>
       )}
 
+      {/* Bulk Actions Toolbar */}
+      {selectedExpenses.size > 0 && (
+        <div className="card bg-blue-50 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-blue-900">
+                {selectedExpenses.size} of {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} selected
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={clearSelection}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                disabled={isDeleting}
+              >
+                Clear Selection
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+                className="btn-danger flex items-center"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <TrashIcon className="h-4 w-4 mr-2" />
+                    Delete Selected
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Expenses Table */}
       <div className="card">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {'#'}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={selectedExpenses.size === filteredExpenses.length && filteredExpenses.length > 0}
+                    onChange={toggleSelectAll}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    aria-label="Select all expenses"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Item/Vendor
                 </th>
@@ -782,8 +916,25 @@ export default function Expenses() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredExpenses.map((expense) => (
-                <tr key={expense.expense_id} className="hover:bg-gray-50">
+              {filteredExpenses.map((expense, i) => (
+                <tr 
+                  key={expense.expense_id} 
+                  className={`hover:bg-gray-50 ${selectedExpenses.has(expense.expense_id) ? 'bg-blue-50' : ''}`}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {i + 1}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedExpenses.has(expense.expense_id)}
+                      onChange={() => toggleExpenseSelection(expense.expense_id)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      aria-label={`Select ${expense.item}`}
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
                       {expense.item}
