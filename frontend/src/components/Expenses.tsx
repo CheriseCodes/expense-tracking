@@ -5,10 +5,11 @@ import {
   TrashIcon, 
   MagnifyingGlassIcon,
   FunnelIcon,
-  XMarkIcon
+  XMarkIcon,
+  DocumentArrowUpIcon
 } from '@heroicons/react/24/outline';
 import { expenseApi, userApi, categoryApi } from '../services/api';
-import type { Expense, ExpenseCreate, ExpenseUpdate, User, Category } from '../types/api';
+import type { Expense, ExpenseCreate, User, Category } from '../types/api';
 
 interface ExpenseFormData {
   user_id: string;
@@ -22,17 +23,31 @@ interface ExpenseFormData {
   new_categories: string[]; // Array of new category names to create
 }
 
+// CSV Import interfaces
+interface CSVRow {
+  item: string;
+  vendor: string;
+  price: number;
+  date_purchased: string;
+  payment_method: string;
+  notes: string;
+  categories: string;
+}
+
+interface CSVImportData {
+  csvContent: string;
+  month: string;
+  year: string;
+  parsedData: CSVRow[];
+  errors: string[];
+}
+
 // Currency validation function
 const validateCurrency = (value: string): boolean => {
   const currencyRegex = /^\d*\.?\d{0,2}$/;
   return currencyRegex.test(value);
 };
 
-// Format currency for display
-const formatCurrency = (value: string): string => {
-  const num = parseFloat(value);
-  return isNaN(num) ? '0.00' : num.toFixed(2);
-};
 
 export default function Expenses() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -61,6 +76,19 @@ export default function Expenses() {
     selected_categories: [],
     new_categories: []
   });
+
+  // CSV Import state
+  const [showCSVModal, setShowCSVModal] = useState(false);
+  const [csvImportData, setCsvImportData] = useState<CSVImportData>({
+    csvContent: '',
+    month: new Date().getMonth().toString(),
+    year: new Date().getFullYear().toString(),
+    parsedData: [],
+    errors: []
+  });
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
 
   useEffect(() => {
     fetchData();
@@ -218,6 +246,282 @@ export default function Expenses() {
     }));
   };
 
+    // CSV parsing function
+    const parseCSV = (content: string, month: string, year: string): { data: CSVRow[], errors: string[] } => {
+      const lines = content.trim().split('\n');
+      const errors: string[] = [];
+      const data: CSVRow[] = [];
+  
+      if (lines.length < 2) {
+        errors.push('CSV must have at least a header row and one data row');
+        return { data, errors };
+      }
+  
+      const header = lines[0].split('\t').map(h => h.trim());
+      
+      // Define header mappings (case-insensitive)
+      const headerMappings: { [key: string]: string } = {
+        'item': 'item',
+        'vendor': 'vendor', 
+        'price': 'price',
+        'date': 'date',
+        'method': 'method',
+        'payment_method': 'method',
+        'payment method': 'method',
+        'notes': 'notes',
+        'note': 'notes',
+        'categories': 'categories',
+        'category': 'categories',
+        'cat': 'categories'
+      };
+      
+      // Map headers to their corresponding field names
+      const headerMap: { [key: string]: number } = {};
+      const foundFields: { [key: string]: boolean } = {};
+      
+      for (let i = 0; i < header.length; i++) {
+        const headerName = header[i].toLowerCase();
+        const mappedField = headerMappings[headerName];
+        
+        if (mappedField) {
+          headerMap[mappedField] = i;
+          foundFields[mappedField] = true;
+        }
+      }
+      
+      // Check if at least one recognized field is present
+      const recognizedFields = Object.keys(foundFields);
+      if (recognizedFields.length === 0) {
+        errors.push(`No recognized columns found. Available columns: ${header.join(', ')}. Supported columns: Item, Vendor, Price, Date, Method, Notes`);
+        return { data, errors };
+      }
+  
+      // Parse data rows
+      for (let i = 1; i < lines.length; i++) {
+        const row = lines[i].split('\t');
+        
+        // Handle rows with missing columns by padding with empty strings
+        while (row.length < header.length) {
+          row.push('');
+        }
+        
+        // Extract values using header mapping
+        const item = headerMap['item'] !== undefined ? row[headerMap['item']] : '';
+        const vendor = headerMap['vendor'] !== undefined ? row[headerMap['vendor']] : '';
+        const priceStr = headerMap['price'] !== undefined ? row[headerMap['price']] : '';
+        const dayStr = headerMap['date'] !== undefined ? row[headerMap['date']] : '';
+        const method = headerMap['method'] !== undefined ? row[headerMap['method']] : '';
+        const notes = headerMap['notes'] !== undefined ? row[headerMap['notes']] : '';
+        const categories = headerMap['categories'] !== undefined ? row[headerMap['categories']] : '';
+        
+        // Validate fields only if they are present
+        let hasErrors = false;
+        
+        // Validate item if present
+        if (headerMap['item'] !== undefined && !item.trim()) {
+          errors.push(`Row ${i + 1}: Item cannot be empty`);
+          hasErrors = true;
+        }
+        
+        // Validate vendor if present
+        if (headerMap['vendor'] !== undefined && !vendor.trim()) {
+          errors.push(`Row ${i + 1}: Vendor cannot be empty`);
+          hasErrors = true;
+        }
+        
+        // Validate price if present
+        let price = 0;
+        if (headerMap['price'] !== undefined) {
+          if (!priceStr.trim()) {
+            errors.push(`Row ${i + 1}: Price cannot be empty`);
+            hasErrors = true;
+          } else {
+            price = parseFloat(priceStr);
+            if (isNaN(price)) {
+              errors.push(`Row ${i + 1}: Invalid price "${priceStr}"`);
+              hasErrors = true;
+            }
+          }
+        }
+        
+        // Validate date if present
+        let dateStr = new Date().toISOString().split('T')[0]; // Default to today
+        if (headerMap['date'] !== undefined) {
+          if (!dayStr.trim()) {
+            errors.push(`Row ${i + 1}: Date cannot be empty`);
+            hasErrors = true;
+          } else {
+            const day = parseInt(dayStr);
+            if (isNaN(day) || day < 1 || day > 31) {
+              errors.push(`Row ${i + 1}: Invalid day "${dayStr}"`);
+              hasErrors = true;
+            } else {
+              const monthNum = parseInt(month);
+              const yearNum = parseInt(year);
+              const date = new Date(yearNum, monthNum, day);
+              dateStr = date.toISOString().split('T')[0];
+            }
+          }
+        }
+        
+        if (hasErrors) continue;
+  
+        data.push({
+          item: item.trim() || 'Unknown Item',
+          vendor: vendor.trim() || 'Unknown Vendor',
+          price: price || 0,
+          date_purchased: dateStr,
+          payment_method: method ? method.trim() : '',
+          notes: notes ? notes.trim() : '',
+          categories: categories ? categories.trim() : ''
+        });
+      }
+  
+      return { data, errors };
+    };
+  
+    // Handle CSV content change
+    const handleCSVContentChange = (content: string) => {
+      const { data, errors } = parseCSV(content, csvImportData.month, csvImportData.year);
+      setCsvImportData(prev => ({
+        ...prev,
+        csvContent: content,
+        parsedData: data,
+        errors
+      }));
+    };
+  
+    // Handle month/year change
+    const handleDateChange = (month: string, year: string) => {
+      const { data, errors } = parseCSV(csvImportData.csvContent, month, year);
+      setCsvImportData(prev => ({
+        ...prev,
+        month,
+        year,
+        parsedData: data,
+        errors
+      }));
+    };
+  
+    // Handle file upload
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+  
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        handleCSVContentChange(content);
+      };
+      reader.readAsText(file);
+    };
+  
+    // Import expenses
+    const handleImportExpenses = async () => {
+      if (csvImportData.parsedData.length === 0) return;
+  
+      setIsImporting(true);
+      setError(null);
+      setImportProgress({ current: 0, total: csvImportData.parsedData.length });
+      
+      try {
+        const selectedUser = users.find(u => u.user_id === formData.user_id);
+        if (!selectedUser) {
+          setError('Please select a user');
+          return;
+        }
+  
+        let successCount = 0;
+        let errorCount = 0;
+        const errors: string[] = [];
+  
+        // Process expenses one by one with error handling for each
+        for (let i = 0; i < csvImportData.parsedData.length; i++) {
+          setImportProgress({ current: i + 1, total: csvImportData.parsedData.length });
+          const row = csvImportData.parsedData[i];
+          
+          try {
+            // Parse categories from CSV if present
+            const newCategories: string[] = [];
+            if (row.categories && row.categories.trim()) {
+              // Split by comma and clean up each category name
+              newCategories.push(...row.categories.split(',').map(cat => cat.trim()).filter(cat => cat.length > 0));
+            }
+
+            const expenseData: ExpenseCreate = {
+              user_id: selectedUser.user_id,
+              item: row.item,
+              vendor: row.vendor,
+              price: row.price,
+              date_purchased: row.date_purchased,
+              payment_method: row.payment_method || undefined,
+              notes: row.notes || undefined,
+              new_categories: newCategories
+            };
+  
+            await expenseApi.create(expenseData);
+            successCount++;
+            
+            // Add a small delay between requests to prevent overwhelming the backend
+            if (i < csvImportData.parsedData.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+          } catch (error) {
+            errorCount++;
+            let errorMessage = `Row ${i + 1} (${row.item}): `;
+            
+            if (error && typeof error === 'object' && 'response' in error) {
+              // Axios error with response
+              const axiosError = error as any;
+              if (axiosError.response?.status === 500) {
+                errorMessage += 'Server error (500) - expense may have been created but with issues';
+              } else if (axiosError.response?.status) {
+                errorMessage += `HTTP ${axiosError.response.status}: ${axiosError.response.data?.detail || 'Unknown error'}`;
+              } else {
+                errorMessage += 'Network error - check backend connection';
+              }
+            } else {
+              errorMessage += error instanceof Error ? error.message : 'Unknown error';
+            }
+            
+            errors.push(errorMessage);
+            console.error(`Failed to import expense ${i + 1}:`, error);
+            
+            // Continue processing other expenses even if one fails
+            continue;
+          }
+        }
+  
+        // Always refresh the expenses list to show any successfully created expenses
+        // (even if there were 500 errors, some expenses might have been created)
+        await fetchData();
+        
+        if (errorCount > 0) {
+          setError(`Import completed with errors: ${successCount} successful, ${errorCount} failed. Errors: ${errors.join('; ')}`);
+          // Don't close modal if there were errors, so user can see the error details
+        } else {
+          setError(null);
+          // Close modal only if all imports were successful
+          setShowCSVModal(false);
+          setCsvImportData({
+            csvContent: '',
+            month: new Date().getMonth().toString(),
+            year: new Date().getFullYear().toString(),
+            parsedData: [],
+            errors: []
+          });
+        }
+        
+      } catch (error) {
+        setError('Failed to import expenses: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        console.error('Import error:', error);
+        } finally {
+        setIsImporting(false);
+        setImportProgress({ current: 0, total: 0 });
+      }
+    };
+
   // Get unique vendors and payment methods for filter dropdowns
   const uniqueVendors = [...new Set(expenses.map(expense => expense.vendor).filter(Boolean))].sort();
   const uniquePaymentMethods = [...new Set(expenses.map(expense => expense.payment_method).filter(Boolean))].sort();
@@ -264,24 +568,34 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6">
+      {/* Header START */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Expenses</h1>
           <p className="text-gray-600 mt-2">Manage your expenses</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingExpense(null);
-            resetForm();
-            setShowModal(true);
-          }}
-          className="btn-primary flex items-center"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Expense
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowCSVModal(true)}
+            className="btn-secondary flex items-center"
+          >
+            <DocumentArrowUpIcon className="h-5 w-5 mr-2" />
+            Import CSV
+          </button>
+          <button
+            onClick={() => {
+              setEditingExpense(null);
+              resetForm();
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add Expense
+          </button>
+        </div>
       </div>
-
+      {/* Header END */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
@@ -722,6 +1036,228 @@ export default function Expenses() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Import Modal */}
+      {showCSVModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-[800px] shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Import Expenses from CSV
+              </h3>
+              
+              {/* CSV Format Instructions */}
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">CSV Format Requirements:</h4>
+                <p className="text-sm text-blue-800 mb-2">
+                  Your CSV file should have at least one of these columns (tab-separated, any order):
+                </p>
+                <div className="text-sm text-blue-800 font-mono bg-blue-100 p-2 rounded mb-2">
+                  <strong>Supported columns:</strong> Item, Vendor, Price, Date, Method (or Payment Method), Notes (or Note), Categories (or Category)
+                </div>
+                <div className="text-sm text-blue-800 font-mono bg-blue-100 p-2 rounded">
+                  Examples:<br/>
+                  • Full: Item	Vendor	Price	Date	Method	Notes	Categories<br/>
+                  • Minimal: Item<br/>
+                  • Custom: Price	Vendor	Item	Categories
+                </div>
+                <p className="text-sm text-blue-800 mt-2">
+                  • <strong>Only 1 column required</strong> - any recognized column will work<br/>
+                  • <strong>Date</strong> should be the day of the month (1-31) if present<br/>
+                  • <strong>Month and Year</strong> will be set below<br/>
+                  • <strong>Categories</strong> can be comma-separated (e.g., "Food, Groceries")<br/>
+                  • <strong>Missing fields</strong> will use defaults (Unknown Item/Vendor, $0.00, today's date)
+                </p>
+              </div>
+
+              {/* Month and Year Selection */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Month
+                  </label>
+                  <select
+                    value={csvImportData.month}
+                    onChange={(e) => handleDateChange(e.target.value, csvImportData.year)}
+                    className="input-field"
+                  >
+                    <option value="0">January</option>
+                    <option value="1">February</option>
+                    <option value="2">March</option>
+                    <option value="3">April</option>
+                    <option value="4">May</option>
+                    <option value="5">June</option>
+                    <option value="6">July</option>
+                    <option value="7">August</option>
+                    <option value="8">September</option>
+                    <option value="9">October</option>
+                    <option value="10">November</option>
+                    <option value="11">December</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Year
+                  </label>
+                  <input
+                    type="number"
+                    value={csvImportData.year}
+                    onChange={(e) => handleDateChange(csvImportData.month, e.target.value)}
+                    className="input-field"
+                    min="2000"
+                    max="2100"
+                  />
+                </div>
+              </div>
+
+              {/* File Upload */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Upload CSV File
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleFileUpload}
+                  className="input-field"
+                />
+              </div>
+
+              {/* CSV Content Textarea */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Or paste CSV content:
+                </label>
+                <textarea
+                  value={csvImportData.csvContent}
+                  onChange={(e) => handleCSVContentChange(e.target.value)}
+                  className="input-field"
+                  rows={8}
+                  placeholder="Paste your CSV content here..."
+                />
+              </div>
+
+              {/* User Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Assign expenses to user:
+                </label>
+                <select
+                  value={formData.user_id}
+                  onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Select a user</option>
+                  {users.map((user) => (
+                    <option key={user.user_id} value={user.user_id}>
+                      {user.username}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Errors Display */}
+              {csvImportData.errors.length > 0 && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-red-900 mb-2">Errors found:</h4>
+                  <ul className="text-sm text-red-800 list-disc list-inside">
+                    {csvImportData.errors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Preview */}
+              {csvImportData.parsedData.length > 0 && (
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-green-900 mb-2">
+                    Preview ({csvImportData.parsedData.length} expenses ready to import):
+                  </h4>
+                  <div className="max-h-32 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-green-800">
+                          <th className="text-left p-1">Item</th>
+                          <th className="text-left p-1">Vendor</th>
+                          <th className="text-left p-1">Price</th>
+                          <th className="text-left p-1">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvImportData.parsedData.slice(0, 5).map((row, index) => (
+                          <tr key={index} className="text-green-700">
+                            <td className="p-1">{row.item}</td>
+                            <td className="p-1">{row.vendor}</td>
+                            <td className="p-1">${row.price.toFixed(2)}</td>
+                            <td className="p-1">{row.date_purchased}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {csvImportData.parsedData.length > 5 && (
+                      <p className="text-sm text-green-600 mt-2">
+                        ... and {csvImportData.parsedData.length - 5} more
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Indicator */}
+              {isImporting && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-900">
+                      Importing expenses...
+                    </span>
+                    <span className="text-sm text-blue-700">
+                      {importProgress.current} of {importProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCSVModal(false);
+                    setCsvImportData({
+                      csvContent: '',
+                      month: new Date().getMonth().toString(),
+                      year: new Date().getFullYear().toString(),
+                      parsedData: [],
+                      errors: []
+                    });
+                  }}
+                  className="btn-secondary"
+                  disabled={isImporting}
+                >
+                  {isImporting ? 'Close' : 'Cancel'}
+                </button>
+                {!isImporting && (
+                  <button
+                    type="button"
+                    onClick={handleImportExpenses}
+                    disabled={csvImportData.parsedData.length === 0 || !formData.user_id}
+                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Import {csvImportData.parsedData.length} Expenses
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

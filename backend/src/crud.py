@@ -194,7 +194,7 @@ def create_expense(db: Session, expense: ExpenseCreate) -> Expense:
         raise ValueError("Price must be between 0 and 999999.99")
     
     # Extract new categories before creating expense
-    new_categories = expense_data.pop('new_categories', [])
+    new_categories = expense_data.pop('new_categories', []) or []
     
     db_expense = Expense(**expense_data)
     db.add(db_expense)
@@ -217,7 +217,7 @@ def update_expense(db: Session, expense_id: UUID, expense: ExpenseUpdate) -> Opt
         update_data = expense.dict(exclude_unset=True)
         
         # Extract new categories before updating expense
-        new_categories = update_data.pop('new_categories', [])
+        new_categories = update_data.pop('new_categories', []) or []
         
         # Get existing categories before updating
         existing_categories = [ec.category_id for ec in db_expense.expense_categories]
