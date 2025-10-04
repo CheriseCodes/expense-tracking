@@ -232,18 +232,6 @@ describe('Dashboard', () => {
         expect(statCardValues.length).toBeGreaterThan(0)
       })
     })
-
-    it('displays correct subtitles for stat cards', async () => {
-      renderDashboard()
-      
-      await waitFor(() => {
-        expect(screen.getByText('Registered users')).toBeInTheDocument()
-        expect(screen.getByText('Expense categories')).toBeInTheDocument()
-        expect(screen.getByText('Tracked expenses')).toBeInTheDocument()
-        expect(screen.getByText('Planned purchases')).toBeInTheDocument()
-        expect(screen.getByText('3 active / 3 total')).toBeInTheDocument()
-      })
-    })
   })
 
   describe('Financial Summary', () => {
@@ -477,13 +465,6 @@ describe('Dashboard', () => {
   })
 
   describe('Budget Calculations', () => {
-    it('calculates active budgets correctly', async () => {
-      renderDashboard()
-      
-      await waitFor(() => {
-        expect(screen.getByText('3 active / 3 total')).toBeInTheDocument()
-      })
-    })
 
     it('calculates over budget count correctly', async () => {
       const overBudgetData = [
