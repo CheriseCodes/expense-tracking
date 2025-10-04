@@ -881,6 +881,9 @@ export default function Expenses() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {'#'}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <input
                     type="checkbox"
                     checked={selectedExpenses.size === filteredExpenses.length && filteredExpenses.length > 0}
@@ -913,11 +916,16 @@ export default function Expenses() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredExpenses.map((expense) => (
+              {filteredExpenses.map((expense, i) => (
                 <tr 
                   key={expense.expense_id} 
                   className={`hover:bg-gray-50 ${selectedExpenses.has(expense.expense_id) ? 'bg-blue-50' : ''}`}
                 >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {i + 1}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
