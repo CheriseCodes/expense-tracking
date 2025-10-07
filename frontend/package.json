@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --ui --coverage",
+    "test:ui:coverage": "vitest --ui --coverage",
+    "test:coverage": "vitest --coverage",
     "test:watch": "vitest --watch"
   },
   "dependencies": {
