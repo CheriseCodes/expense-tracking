@@ -2,7 +2,7 @@
 .DS_Store
 
 # Project management
-.project/
+.my_project/
 .cursor/
 real_data/
 
