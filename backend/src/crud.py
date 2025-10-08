@@ -77,7 +77,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
 
 def create_user(db: Session, user: UserCreate) -> User:
     # Sanitize input
-    user_data = user.dict()
+    user_data = user.model_dump()
     user_data['username'] = sanitize_input(user_data['username'])
     user_data['email'] = sanitize_input(user_data['email'])
     
@@ -90,7 +90,7 @@ def create_user(db: Session, user: UserCreate) -> User:
 def update_user(db: Session, user_id: UUID, user: UserUpdate) -> Optional[User]:
     db_user = get_user(db, user_id)
     if db_user:
-        update_data = user.dict(exclude_unset=True)
+        update_data = user.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_user, field, value)
         db.commit()
@@ -134,7 +134,7 @@ def get_or_create_category(db: Session, category_name: str) -> Category:
 
 def create_category(db: Session, category: CategoryCreate) -> Category:
     # Sanitize input
-    category_data = category.dict()
+    category_data = category.model_dump()
     category_data['category_name'] = sanitize_input(category_data['category_name'])
     
     db_category = Category(**category_data)
@@ -146,7 +146,7 @@ def create_category(db: Session, category: CategoryCreate) -> Category:
 def update_category(db: Session, category_id: UUID, category: CategoryUpdate) -> Optional[Category]:
     db_category = get_category(db, category_id)
     if db_category:
-        update_data = category.dict(exclude_unset=True)
+        update_data = category.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_category, field, value)
         db.commit()
@@ -181,7 +181,7 @@ def get_expenses(
 
 def create_expense(db: Session, expense: ExpenseCreate) -> Expense:
     # Sanitize input
-    expense_data = expense.dict()
+    expense_data = expense.model_dump()
     expense_data['item'] = sanitize_input(expense_data['item'])
     expense_data['vendor'] = sanitize_input(expense_data['vendor'])
     if expense_data.get('payment_method'):
@@ -214,7 +214,7 @@ def create_expense(db: Session, expense: ExpenseCreate) -> Expense:
 def update_expense(db: Session, expense_id: UUID, expense: ExpenseUpdate) -> Optional[Expense]:
     db_expense = get_expense(db, expense_id)
     if db_expense:
-        update_data = expense.dict(exclude_unset=True)
+        update_data = expense.model_dump(exclude_unset=True)
         
         # Extract new categories before updating expense
         new_categories = update_data.pop('new_categories', []) or []
@@ -335,7 +335,7 @@ def get_wishlist_items(
     return query.order_by(Wishlist.priority).offset(skip).limit(limit).all()
 
 def create_wishlist_item(db: Session, wishlist_item: WishlistCreate) -> Wishlist:
-    db_wishlist_item = Wishlist(**wishlist_item.dict())
+    db_wishlist_item = Wishlist(**wishlist_item.model_dump())
     db.add(db_wishlist_item)
     db.commit()
     db.refresh(db_wishlist_item)
@@ -344,7 +344,7 @@ def create_wishlist_item(db: Session, wishlist_item: WishlistCreate) -> Wishlist
 def update_wishlist_item(db: Session, wish_id: UUID, wishlist_item: WishlistUpdate) -> Optional[Wishlist]:
     db_wishlist_item = get_wishlist_item(db, wish_id)
     if db_wishlist_item:
-        update_data = wishlist_item.dict(exclude_unset=True)
+        update_data = wishlist_item.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_wishlist_item, field, value)
         db.commit()
@@ -397,7 +397,7 @@ def create_budget(db: Session, budget: BudgetCreate) -> Budget:
     is_over_max = total_spend > budget.max_spend
     
     # Create budget with calculated values
-    budget_data = budget.dict()
+    budget_data = budget.model_dump()
     budget_data['current_spend'] = current_spend
     budget_data['future_spend'] = future_spend
     budget_data['is_over_max'] = is_over_max
@@ -413,7 +413,7 @@ def create_budget(db: Session, budget: BudgetCreate) -> Budget:
 def update_budget(db: Session, budget_id: UUID, budget: BudgetUpdate) -> Optional[Budget]:
     db_budget = get_budget(db, budget_id)
     if db_budget:
-        update_data = budget.dict(exclude_unset=True)
+        update_data = budget.model_dump(exclude_unset=True)
         
         # Recalculate current spend if category or user changed
         if 'category_id' in update_data or 'user_id' in update_data:
@@ -469,12 +469,18 @@ def get_total_expenses_in_date_range(db: Session, user_id: Optional[UUID] = None
     return result or 0.0
 
 def get_expenses_by_category(db: Session, user_id: Optional[UUID] = None) -> List[dict]:
-    query = db.query(
-        Category.category_name,
-        func.sum(Expense.price).label('total')
-    ).join(ExpenseCategory).join(Expense)
-    
+    """Aggregate expenses by category with explicit join path to avoid ambiguity."""
+    query = (
+        db.query(
+            Category.category_name,
+            func.sum(Expense.price).label('total')
+        )
+        .select_from(Category)
+        .join(ExpenseCategory, ExpenseCategory.category_id == Category.category_id)
+        .join(Expense, Expense.expense_id == ExpenseCategory.expense_id)
+    )
+
     if user_id:
         query = query.filter(Expense.user_id == user_id)
-    
+
     return query.group_by(Category.category_id, Category.category_name).all()

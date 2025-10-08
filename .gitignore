@@ -1,22 +1,20 @@
 # Mac
 .DS_Store
 
-# Application
+# Project management
+.my_project/
+.cursor/
 real_data/
-my_notes.txt
-notes.txt
+
+# Application
 *log.*
-.vite/
-notes/
 
 # Frontend
 frontend/coverage/
+.vite/
 
 # CSV files - ignore purchases.csv but keep sample data
 *-purchases.csv
-
-# Cursor
-.cursor/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
