@@ -8,7 +8,7 @@ import re
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
     email: EmailStr
-    role: str = Field(..., pattern=r'^(regular|admin)$', strip_whitespace=True)
+    role: str = Field(..., pattern=r'^(regular|admin)$', json_schema_extra={'strip_whitespace': True})
 
 class UserCreate(UserBase):
     password_hash: str = Field(..., min_length=60, max_length=73)  # bcrypt hash length
@@ -16,7 +16,7 @@ class UserCreate(UserBase):
 class UserUpdate(UserBase):
     username: Optional[str] = Field(None, min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
     email: Optional[EmailStr] = None
-    role: Optional[str] = Field(None, pattern=r'^(regular|admin)$', strip_whitespace=True)
+    role: Optional[str] = Field(None, pattern=r'^(regular|admin)$', json_schema_extra={'strip_whitespace': True})
     password_hash: Optional[str] = Field(None, min_length=60, max_length=73)
 
 class User(UserBase):
@@ -27,7 +27,7 @@ class User(UserBase):
 
 # Category schemas
 class CategoryBase(BaseModel):
-    category_name: str = Field(..., min_length=1, max_length=100, strip_whitespace=True)
+    category_name: str = Field(..., min_length=1, max_length=100, json_schema_extra={'strip_whitespace': True})
     
     @field_validator('category_name')
     @classmethod
@@ -40,7 +40,7 @@ class CategoryCreate(CategoryBase):
     pass
 
 class CategoryUpdate(CategoryBase):
-    category_name: Optional[str] = Field(None, min_length=1, max_length=100, strip_whitespace=True)
+    category_name: Optional[str] = Field(None, min_length=1, max_length=100, json_schema_extra={'strip_whitespace': True})
 
 class Category(CategoryBase):
     category_id: UUID
@@ -48,12 +48,12 @@ class Category(CategoryBase):
 
 # Expense schemas
 class ExpenseBase(BaseModel):
-    item: str = Field(..., min_length=1, max_length=255, strip_whitespace=True)
-    vendor: str = Field(..., min_length=1, max_length=255, strip_whitespace=True)
+    item: str = Field(..., min_length=1, max_length=255, json_schema_extra={'strip_whitespace': True})
+    vendor: str = Field(..., min_length=1, max_length=255, json_schema_extra={'strip_whitespace': True})
     price: float = Field(..., gt=0, le=999999.99)  # Positive price with reasonable limit
     date_purchased: date
-    payment_method: Optional[str] = Field(None, max_length=100, strip_whitespace=True)
-    notes: Optional[str] = Field(None, max_length=1000, strip_whitespace=True)
+    payment_method: Optional[str] = Field(None, max_length=100, json_schema_extra={'strip_whitespace': True})
+    notes: Optional[str] = Field(None, max_length=1000, json_schema_extra={'strip_whitespace': True})
     
     @field_validator('item', 'vendor', 'payment_method', 'notes')
     @classmethod
@@ -69,12 +69,12 @@ class ExpenseCreate(ExpenseBase):
     new_categories: Optional[List[str]] = Field(None, description="List of new category names to create")
 
 class ExpenseUpdate(ExpenseBase):
-    item: Optional[str] = Field(None, min_length=1, max_length=255, strip_whitespace=True)
-    vendor: Optional[str] = Field(None, min_length=1, max_length=255, strip_whitespace=True)
+    item: Optional[str] = Field(None, min_length=1, max_length=255, json_schema_extra={'strip_whitespace': True})
+    vendor: Optional[str] = Field(None, min_length=1, max_length=255, json_schema_extra={'strip_whitespace': True})
     price: Optional[float] = Field(None, gt=0, le=999999.99)
     date_purchased: Optional[date] = None
-    payment_method: Optional[str] = Field(None, max_length=100, strip_whitespace=True)
-    notes: Optional[str] = Field(None, max_length=1000, strip_whitespace=True)
+    payment_method: Optional[str] = Field(None, max_length=100, json_schema_extra={'strip_whitespace': True})
+    notes: Optional[str] = Field(None, max_length=1000, json_schema_extra={'strip_whitespace': True})
     new_categories: Optional[List[str]] = Field(None, description="List of new category names to create")
 
 class Expense(ExpenseBase):
@@ -97,12 +97,12 @@ class ExpenseCategory(ExpenseCategoryBase):
 
 # Wishlist schemas
 class WishlistBase(BaseModel):
-    item: str = Field(..., min_length=1, max_length=255, strip_whitespace=True)
-    vendor: Optional[str] = Field(None, max_length=255, strip_whitespace=True)
+    item: str = Field(..., min_length=1, max_length=255, json_schema_extra={'strip_whitespace': True})
+    vendor: Optional[str] = Field(None, max_length=255, json_schema_extra={'strip_whitespace': True})
     price: float = Field(..., gt=0, le=999999.99)
     priority: int = Field(..., ge=1, le=10)  # Priority 1-10
     status: str = Field(..., pattern=r'^(wished|scheduled|bought)$')
-    notes: Optional[str] = Field(None, max_length=1000, strip_whitespace=True)
+    notes: Optional[str] = Field(None, max_length=1000, json_schema_extra={'strip_whitespace': True})
     planned_date: Optional[date] = None
     
     @field_validator('item', 'vendor', 'notes')
@@ -117,12 +117,12 @@ class WishlistCreate(WishlistBase):
     user_id: UUID
 
 class WishlistUpdate(WishlistBase):
-    item: Optional[str] = Field(None, min_length=1, max_length=255, strip_whitespace=True)
-    vendor: Optional[str] = Field(None, max_length=255, strip_whitespace=True)
+    item: Optional[str] = Field(None, min_length=1, max_length=255, json_schema_extra={'strip_whitespace': True})
+    vendor: Optional[str] = Field(None, max_length=255, json_schema_extra={'strip_whitespace': True})
     price: Optional[float] = Field(None, gt=0, le=999999.99)
     priority: Optional[int] = Field(None, ge=1, le=10)
     status: Optional[str] = Field(None, pattern=r'^(wished|scheduled|bought)$')
-    notes: Optional[str] = Field(None, max_length=1000, strip_whitespace=True)
+    notes: Optional[str] = Field(None, max_length=1000, json_schema_extra={'strip_whitespace': True})
     planned_date: Optional[date] = None
 
 class Wishlist(WishlistBase):
@@ -144,7 +144,7 @@ class BudgetBase(BaseModel):
     
     # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
     # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator('end_date')
+    @field_validator('end_date')
     def validate_date_range(cls, v, values):
         if 'start_date' in values and v <= values['start_date']:
             raise ValueError('end_date must be after start_date')
@@ -152,7 +152,7 @@ class BudgetBase(BaseModel):
     
     # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
     # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator('timeframe_interval')
+    @field_validator('timeframe_interval')
     def validate_timeframe_interval(cls, v, values):
         if 'timeframe_type' in values and values['timeframe_type'] != 'custom' and v is None:
             raise ValueError('timeframe_interval is required for non-custom timeframes')
