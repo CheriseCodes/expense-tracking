@@ -181,24 +181,3 @@ def test_analytics(client):
         assert "total" in first
         assert isinstance(first["total"], float)
         assert isinstance(first["category"], str)
-
-
-# def main():
-#     print("Starting API tests...")
-#     print("=" * 50)
-#     try:
-#         test_health()
-#         user_id = test_user()
-#         category_id = test_categories()
-#         if user_id and category_id:
-#             test_expenses(user_id, category_id)
-#         print("=" * 50)
-#         print("Tests completed!")
-#     except requests.exceptions.ConnectionError:
-#         print("Error: Could not connect to the API. Make sure the services are running with:")
-#         print("docker compose up -d")
-#     except Exception as e:
-#         print(f"Error during testing: {e}")
-
-# if __name__ == "__main__":
-#     main() 
