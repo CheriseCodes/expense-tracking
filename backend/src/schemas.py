@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator, EmailStr
+from pydantic import field_validator, ConfigDict, BaseModel, Field, validator, EmailStr
 from typing import Optional, List
 from datetime import datetime, date
 from uuid import UUID
@@ -23,15 +23,14 @@ class User(UserBase):
     user_id: UUID
     created_at: datetime
     last_login: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Category schemas
 class CategoryBase(BaseModel):
     category_name: str = Field(..., min_length=1, max_length=100, strip_whitespace=True)
     
-    @validator('category_name')
+    @field_validator('category_name')
+    @classmethod
     def validate_category_name(cls, v):
         # Remove any potentially dangerous characters
         v = re.sub(r'[<>"\']', '', v)
@@ -45,9 +44,7 @@ class CategoryUpdate(CategoryBase):
 
 class Category(CategoryBase):
     category_id: UUID
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Expense schemas
 class ExpenseBase(BaseModel):
@@ -58,7 +55,8 @@ class ExpenseBase(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=100, strip_whitespace=True)
     notes: Optional[str] = Field(None, max_length=1000, strip_whitespace=True)
     
-    @validator('item', 'vendor', 'payment_method', 'notes')
+    @field_validator('item', 'vendor', 'payment_method', 'notes')
+    @classmethod
     def validate_text_fields(cls, v):
         if v is not None:
             # Remove potentially dangerous characters
@@ -84,9 +82,7 @@ class Expense(ExpenseBase):
     user_id: UUID
     created_at: datetime
     categories: Optional[List[Category]] = []
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # ExpenseCategory schemas
 class ExpenseCategoryBase(BaseModel):
@@ -97,8 +93,7 @@ class ExpenseCategoryCreate(ExpenseCategoryBase):
     pass
 
 class ExpenseCategory(ExpenseCategoryBase):
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Wishlist schemas
 class WishlistBase(BaseModel):
@@ -110,7 +105,8 @@ class WishlistBase(BaseModel):
     notes: Optional[str] = Field(None, max_length=1000, strip_whitespace=True)
     planned_date: Optional[date] = None
     
-    @validator('item', 'vendor', 'notes')
+    @field_validator('item', 'vendor', 'notes')
+    @classmethod
     def validate_text_fields(cls, v):
         if v is not None:
             v = re.sub(r'[<>"\']', '', v)
@@ -134,9 +130,7 @@ class Wishlist(WishlistBase):
     user_id: UUID
     created_at: Optional[datetime] = None
     user: Optional[User] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Budget schemas
 class BudgetBase(BaseModel):
@@ -148,12 +142,16 @@ class BudgetBase(BaseModel):
     timeframe_interval: Optional[int] = Field(None, ge=1, le=100)
     recurring_start_date: Optional[date] = None
     
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator('end_date')
     def validate_date_range(cls, v, values):
         if 'start_date' in values and v <= values['start_date']:
             raise ValueError('end_date must be after start_date')
         return v
     
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator('timeframe_interval')
     def validate_timeframe_interval(cls, v, values):
         if 'timeframe_type' in values and values['timeframe_type'] != 'custom' and v is None:
@@ -181,6 +179,4 @@ class Budget(BudgetBase):
     category_id: UUID
     current_spend: float = Field(..., ge=0, le=999999.99)
     future_spend: float = Field(..., ge=0, le=999999.99)
-    
-    class Config:
-        from_attributes = True 
+    model_config = ConfigDict(from_attributes=True)
