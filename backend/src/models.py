@@ -30,7 +30,7 @@ class Category(Base):
     # Relationships
     expense_categories = relationship("ExpenseCategory", back_populates="category")
     budgets = relationship("Budget", back_populates="category")
-    expenses = relationship("Expense", secondary="expense_categories", back_populates="categories")
+    expenses = relationship("Expense", secondary="expense_categories", back_populates="categories", overlaps="expense_categories")
 
 class Expense(Base):
     __tablename__ = "expenses"
@@ -47,8 +47,8 @@ class Expense(Base):
     
     # Relationships
     user = relationship("User", back_populates="expenses")
-    expense_categories = relationship("ExpenseCategory", back_populates="expense")
-    categories = relationship("Category", secondary="expense_categories", back_populates="expenses")
+    expense_categories = relationship("ExpenseCategory", back_populates="expense", overlaps="expenses")
+    categories = relationship("Category", secondary="expense_categories", back_populates="expenses", overlaps="expense_categories")
 
 class ExpenseCategory(Base):
     __tablename__ = "expense_categories"
