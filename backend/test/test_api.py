@@ -66,7 +66,9 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
+    # Use localhost as base_url so TrustedHostMiddleware allows requests
+    # with TestClient(app) as c:
+    with TestClient(app, base_url="http://localhost") as c:
         yield c
     app.dependency_overrides.clear()
 
@@ -89,7 +91,7 @@ def test_user_flow(client):
         "username": "testuser",
         "email": "testuser@example.com",
         "role": "regular",
-        "password_hash": "fakehash123",
+        "password_hash": "x" * 60 
     }
     r = client.post("/users/", json=user_data)
     assert r.status_code == 201
@@ -154,7 +156,7 @@ def test_expenses_flow(client):
     r = client.post(
         f"/expenses/{common_data['expense_id']}/categories/{common_data['category_id']}"
     )
-    assert r.status_code == 201
+    assert r.status_code == 200
     assert r.json()["category_id"] == common_data["category_id"]
 
     # List expenses

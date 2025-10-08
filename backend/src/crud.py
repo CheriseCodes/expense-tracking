@@ -469,12 +469,18 @@ def get_total_expenses_in_date_range(db: Session, user_id: Optional[UUID] = None
     return result or 0.0
 
 def get_expenses_by_category(db: Session, user_id: Optional[UUID] = None) -> List[dict]:
-    query = db.query(
-        Category.category_name,
-        func.sum(Expense.price).label('total')
-    ).join(ExpenseCategory).join(Expense)
-    
+    """Aggregate expenses by category with explicit join path to avoid ambiguity."""
+    query = (
+        db.query(
+            Category.category_name,
+            func.sum(Expense.price).label('total')
+        )
+        .select_from(Category)
+        .join(ExpenseCategory, ExpenseCategory.category_id == Category.category_id)
+        .join(Expense, Expense.expense_id == ExpenseCategory.expense_id)
+    )
+
     if user_id:
         query = query.filter(Expense.user_id == user_id)
-    
+
     return query.group_by(Category.category_id, Category.category_name).all()
